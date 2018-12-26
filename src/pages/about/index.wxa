@@ -1,0 +1,119 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class Index {
+    constructor(){
+        this.data = {
+            imgUrl:'',
+            content:{}
+        }
+    }
+    onLoad(){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+
+        wx.setNavigationBarTitle({
+            title:'关于我们'
+        })
+        this.getAboutInfo();
+    }
+    goBack(){
+        this.router.goBack();
+    }
+    getAboutInfo(){
+        tool.httpMethods({} , this.app.globalData.httpUrl + '/api/aboutUsApiController/getAboutUs' , '' , 'post')
+            .then((res) => {
+                this.setData({
+                    imgUrl:this.app.globalData.httpUrl + res.resultData.imgUrl,
+                    content:res.resultData
+                })
+            })
+    }
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "关于我们"
+}
+</config>
+<template>
+<view class="page">
+    <!--<view class="header-banner">-->
+        <!--<image src="{{imgUrl}}"></image>-->
+    <!--</view>-->
+
+    <!--<view class="content">-->
+        <!--<view class="title">{{content.title}}</view>-->
+        <!--<view class="body">{{content.introduce}}</view>-->
+        <!--<view class="body">{{content.content}}</view>-->
+    <!--</view>-->
+
+    <image src="{{imgUrl}}" style="width: 100%;height: 3200rpx;"></image>
+
+</view>
+</template>
+<style lang="scss">
+    .content{
+        padding: 20rpx;
+        line-height: 1.8888;
+        color: white;
+        .title{
+            font-size: 16px;
+        }
+        .body{
+            font-size: 12px;
+        }
+    }
+    .header-banner{
+        width: 100%;
+        height: 450rpx;
+        image{
+            width: 100%;
+            height: 100%;
+        }
+    }
+.page {
+    display: block;
+    /*background-color: rgb(242,242,242);*/
+    /*background-color: rgb(241,150,1);*/
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.course-content{
+    background-color: white;
+    margin: 20rpx auto;
+    width: 98%;
+}
+
+.about-header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20rpx;
+    background-color: white;
+    .about-name{
+        font-size: 16px;
+    }
+    view{
+        image{
+            height: 50rpx;
+            width: 50rpx;
+            -webkit-transform: rotate(180deg);
+            -moz-transform: rotate(180deg);
+            -ms-transform: rotate(180deg);
+            -o-transform: rotate(180deg);
+            transform: rotate(180deg);
+        }
+    }
+}
+.about-content image{
+    width: 100%;
+    height: 100vh;
+}
+</style>

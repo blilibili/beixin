@@ -1,0 +1,369 @@
+<script>
+import {wxa, Page } from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class Index {
+    constructor(){
+        this.data = {
+            submitForm:{
+                name:'',
+                birthday :'',
+                phone:'',
+                idCard:'',
+                avater:'../../img/default_ava.png',
+                nickName:''
+            },
+            isCanLoadUserInfo:false,
+            current_time:'',
+            isShare:false,
+            comstomerId:0
+        }
+    }
+
+    onLoad(options){
+        //如果是分享链接则关联家人
+        if(options.my){
+            this.setData({
+                isShare:true,
+                comstomerId:options.my
+            });
+
+            this.addMyFamily(this.data.comstomerId);
+
+            //已授权跳到主页
+            // wx.getSetting({
+            //     success :(res) => {
+            //         if (res.authSetting['scope.userInfo']) {
+            //             wx.switchTab({
+            //                 url: '/pages/index'
+            //             })
+            //         }
+            //     }
+            // })
+            // this.storage.clear();
+            this.getMyInfo();
+        }
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+        wx.setNavigationBarTitle({
+            title:'完善个人信息'
+        })
+        let dateStr = this.utils.formatDate(Date.now() , 'yyyy-MM-dd hh:mm:ss');
+        this.setData({
+            current_time:dateStr
+        })
+
+        this.getMyWxName();
+    }
+
+    isCardNo(card) {
+        // 身份证号码为15位或者18位，15位时全为数字，18位前17位为数字，最后一位是校验位，可能为数字或字符X
+        var reg = /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/;
+        if(reg.test(card) === false) {
+            return false
+        }else{
+            return true
+        }
+    }
+
+    checkPhone(phone){
+        if(/^1[34578]\d{9}$/.test(phone)){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+
+
+    addMyFamily(familyId){
+        let currentUserId = wx.getStorageSync('userId');
+        let tmp = {
+            id:currentUserId,
+            child:familyId,
+            token:wx.getStorageSync('token')
+        };
+        tool.httpMethods(tmp , this.app.globalData.httpUrl + '/api/familyApiController/inviteFamily' , '' , 'post')
+            .then((res) => {
+
+            })
+    }
+
+    getMyWxName(){
+        // 查看是否授权
+        wx.getSetting({
+            success :(res) => {
+                if (res.authSetting['scope.userInfo']) {
+                    // 已经授权，可以直接调用 getUserInfo 获取头像昵称
+                    this.setData({
+                        isCanLoadUserInfo:true
+                    })
+                    wx.getUserInfo({
+                        success: (res) => {
+                            this.setData({
+                                ['submitForm.avater']:res.userInfo.avatarUrl,
+                                ['submitForm.name']:res.userInfo.nickName,
+                                ['submitForm.nickName']:res.userInfo.nickName
+                            })
+                            this.getMyInfo();
+                        }
+                    })
+                }else{
+
+                }
+            }
+        })
+    }
+
+    onGotUserInfo(e){
+        let tmp = e.detail.userInfo
+
+        this.setData({
+            ['submitForm.avater']:tmp.avatarUrl,
+            ['submitForm.name']:tmp.nickName,
+            ['submitForm.nickName']:tmp.nickName,
+            isCanLoadUserInfo:true
+        })
+    }
+
+    getMyInfo(){
+        let id = wx.getStorageSync('userId');
+        let token = wx.getStorageSync('token');
+
+        tool.httpMethods({id:id , token} , this.app.globalData.httpUrl + '/api/customerApiController/getCustomerInfo' , '' , 'post')
+                .then((res) => {
+
+                    this.setData({
+                        ['submitForm.birthday']:res.resultData.birthday || '',
+                        ['submitForm.idCard']:res.resultData.idCard || '',
+                        ['submitForm.phone']:res.resultData.phone || ''
+                    })
+
+        })
+    }
+
+    setInputValue(e){
+        let fieldName = e.currentTarget.dataset.name;
+        this.setData({
+            ['submitForm.' + fieldName]:e.detail.value
+        })
+    }
+    saveHandler(){
+        let tmp = this.data.submitForm;
+        let userid = wx.getStorageSync('userId');
+        tmp.id = userid;
+        tmp.token = wx.getStorageSync('token');
+
+       if(typeof tmp.phone == "object" || tmp.phone == ''){
+           wx.showToast({
+               title:'请填写手机信息',
+               icon:'none'
+           })
+           return ;
+       }
+
+        // if(typeof tmp.idCard == "object" || tmp.idCard == ''){
+        //     wx.showToast({
+        //         title:'请填写身份证信息',
+        //         icon:'none'
+        //     })
+        //     return ;
+        // }
+
+        if(typeof tmp.birthday == "object"){
+            wx.showToast({
+                title:'请选择您的生日',
+                icon:'none'
+            })
+            return ;
+        }
+
+        if(!(/^1[34578]\d{9}$/.test(tmp.phone))){
+            wx.showToast({
+                title:'错误的手机号',
+                icon:'none'
+            })
+           return ;
+        }
+        // if(!(/(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/.test(tmp.idCard))){
+        //     wx.showToast({
+        //         title:'错误的身份证',
+        //         icon:'none'
+        //     })
+        //    return ;
+        // }
+
+        tool.httpMethods(tmp , this.app.globalData.httpUrl + '/api/customerApiController/saveCustomerInfo' , '' , 'post')
+            .then((res) => {
+                //邀请家人
+                if(this.data.isShare){
+
+                }
+                wx.switchTab({
+                    url: '/pages/personal/index'
+                })
+            })
+    }
+
+    bindAgeChange(e){
+        this.setData({
+            ['submitForm.birthday']:e.detail.value
+        })
+    }
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "完善个人信息"
+}
+</config>
+<template>
+<view class="page">
+
+    <view class="ava-info">
+
+        <button class="get-userInfo-btn" open-type="getUserInfo" lang="zh_CN" bindgetuserinfo="onGotUserInfo" wx:if="{{!isCanLoadUserInfo}}">
+            <view class="ava-img">
+                <image class="img" style="width: 100%;height: 100%;" src="{{submitForm.avater}}"></image>
+            </view>
+            <view>
+                点击授权
+            </view>
+        </button>
+
+        <view class="ava-img" wx:if="{{isCanLoadUserInfo}}">
+            <image class="img" style="width: 100%;height: 100%;" src="{{submitForm.avater}}"></image>
+        </view>
+
+    </view>
+    <view class="info-form-title-text">
+        请完善信息
+    </view>
+    <view class="info-form-content">
+
+        <view class="common">
+            <view class="label">姓名</view>
+            <view class="form">
+                <input type="text" disabled="{{true}}" value="{{submitForm.name}}" data-name="name" bindblur="setInputValue" />
+            </view>
+            <view style="opacity: 0;">
+                <image src="../../img/close-btn.png"></image>
+            </view>
+        </view>
+
+        <view class="common">
+            <view class="label">出生日期</view>
+            <view class="form" style="position: relative;left:-10rpx;">
+                <picker style="width:240rpx;" bindchange="bindAgeChange" mode="date" value="{{submitForm.birthday}}" start="1950-01-01" end="{{current_time}}">
+                    <view>
+                        {{submitForm.birthday || '请选择' }}
+                    </view>
+                </picker>
+            </view>
+            <image src="../../img/date_button.png"></image>
+        </view>
+
+        <view class="common">
+            <view class="label">身份证</view>
+            <view class="form">
+                <input bindblur="setInputValue" value="{{submitForm.idCard || ''}}" data-name="idCard" type="text" placeholder="请输入(选填)"/>
+            </view>
+            <view style="opacity: 0;">
+                <image src="../../img/close-btn.png"></image>
+            </view>
+        </view>
+
+        <view class="common">
+            <view class="label">手机号</view>
+            <view class="form">
+                <input bindblur="setInputValue" value="{{submitForm.phone || ''}}" data-name="phone" placeholder="请输入手机号" type="text" />
+            </view>
+            <view style="opacity: 0;">
+                <image src="../../img/close-btn.png"></image>
+            </view>
+        </view>
+    </view>
+
+    <view class="info-form-save-btn" bindtap="saveHandler">
+        <button type="primary" style="background-color: #F19601">保存</button>
+    </view>
+</view>
+</template>
+<style lang="scss">
+    button::after{ border: none; }
+.get-userInfo-btn{
+    font-size: 13px;
+    border: 0;
+    border-radius: 0;
+    background-color: white;
+}
+.page {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background-color: rgb(242,242,242);
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.ava-info{
+    background-color: white;
+    padding: 40rpx;
+    text-align: center;
+    .ava-img {
+        width: 150rpx;
+        height: 150rpx;
+        margin: 0 auto 20rpx auto;
+    }
+}
+.info-form-title-text{
+    color: rgb(183,183,183);
+    padding: 30rpx 10rpx;
+    font-size: 12px;
+}
+.common{
+    background-color: white;
+    padding: 30rpx 20rpx;
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    align-items: center;
+    .label{
+        width: 200rpx;
+    }
+    .form{
+        /*margin-left: 100rpx;*/
+        width: 320rpx;
+    }
+    image{
+        width: 50rpx;
+        height: 50rpx;
+    }
+}
+.birth{
+    justify-content: flex-start;
+    .form picker{
+        width: 442rpx;
+        display: flex;
+        flex-direction:column;
+        justify-content: space-between;
+        image {
+            float: right;
+        }
+        view{
+            display: inline-block;
+        }
+    }
+    .form {
+        margin-left: 154rpx;
+    }
+}
+
+.info-form-save-btn{
+    margin-top: 60rpx;
+}
+</style>

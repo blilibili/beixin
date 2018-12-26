@@ -1,0 +1,332 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+
+@Page
+class Index {
+    onLoad(){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+        wx.setNavigationBarTitle({
+            title:'定制保障方案'
+        })
+
+        wx.login({
+            success:(res) =>{
+
+            }
+        })
+    }
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "首页"
+}
+</config>
+<template>
+<view class="page">
+   <view class="plain-section">
+       <image src="../../img/plain-bg.jpg" style="width: 100%;height: 340rpx;"></image>
+   </view>
+
+   <view class="first-section">
+       <view class="title">
+           方案独特价值
+       </view>
+       <view class="desc">
+            减低30%的保费支出，精选1%适合宝宝的好保险
+       </view>
+   </view>
+
+    <view class="second-section">
+        <view class="title">服务流程</view>
+        <view class="process">
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num1.png"></image>
+                </view>
+                <view class="desc">用户支付成功</view>
+            </view>
+            <view class="line">
+                <image src="../../img/plain/line.jpg"></image>
+            </view>
+
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num2.png"></image>
+                </view>
+                <view class="desc">
+                    <view class="main">宝妈理财师初步电话沟通</view>
+                    <view class="sub">进一步了解和确认财务状况和保险需求</view>
+                </view>
+            </view>
+            <view class="line">
+                <image src="../../img/plain/line.jpg"></image>
+            </view>
+
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num3.png"></image>
+                </view>
+                <view class="desc">宝妈理财师定制保险方案</view>
+            </view>
+            <view class="line">
+                <image src="../../img/plain/line.jpg"></image>
+            </view>
+
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num4.png"></image>
+                </view>
+                <view class="desc">宝妈理财师进行方案解析和答疑及异议处理案</view>
+            </view>
+            <view class="line">
+                <image src="../../img/plain/line.jpg"></image>
+            </view>
+
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num5.png"></image>
+                </view>
+                <view class="desc">确认最终保险方案</view>
+            </view>
+            <view class="line">
+                <image src="../../img/plain/line.jpg"></image>
+            </view>
+
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num6.png"></image>
+                </view>
+                <view class="desc">保险方案落地</view>
+            </view>
+            <view class="line">
+                <image src="../../img/plain/line.jpg"></image>
+            </view>
+
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num7.png"></image>
+                </view>
+                <view class="desc">完成服务</view>
+            </view>
+
+        </view>
+    </view>
+
+    <view class="third-section">
+        <view class="column">
+            <view class="ava">
+                <image src="../../img/plain/ava-default.png"></image>
+            </view>
+            <view class="info">
+                <view class="title">认证宝妈理财师</view>
+                <view class="sub">适合年收入20万以下的家庭</view>
+            </view>
+
+            <view class="price">99元</view>
+            <button class="btn" bindtap="goToRouter" data-url="/pages/plain/createServer?grade=1">立即咨询</button>
+        </view>
+        <view class="desc">
+            <view>定制宝宝保险方案</view>
+            <view>初步电话沟通后24小时内出方案</view>
+            <view>出方案后72小时内可咨询</view>
+            <view>可选择一次电话沟通</view>
+            <view>一年内一次免费复盘</view>
+            <view>沟通时间: 周一至周五工作时间</view>
+        </view>
+
+        <view class="column">
+            <view class="ava">
+                <image src="../../img/plain/ava-default.png"></image>
+            </view>
+            <view class="info">
+                <view class="title">中级宝妈理财师</view>
+                <view class="sub">适合中等收入家庭</view>
+            </view>
+            <view class="price">399元</view>
+            <button class="btn" bindtap="goToRouter" data-url="/pages/plain/createServer?grade=2">立即咨询</button>
+        </view>
+        <view class="desc">
+            <view>5年以上保险领域实战经验</view>
+            <view>曾服务超300位用户定制保险方案</view>
+            <view>解决预算较充足或已有保单处理建议</view>
+            <view>初步电话沟通后48小时内出方案</view>
+            <view>可选择两次电话沟通</view>
+            <view>一年内一次免费复盘</view>
+            <view>已有保单处理建议3份以下免费，超过3份，每份69元</view>
+            <view>沟通时间：周一至周五工作日除白天外，可预约工作日晚上沟通</view>
+        </view>
+
+        <view class="column">
+            <view class="ava">
+                <image src="../../img/plain/ava-default.png"></image>
+            </view>
+            <view class="info">
+                <view class="title">高级宝妈理财师</view>
+                <view class="sub">适合中高等收入家庭</view>
+            </view>
+            <view class="price">999元</view>
+            <button class="btn" bindtap="goToRouter" data-url="/pages/plain/createServer?grade=3">立即咨询</button>
+        </view>
+        <view class="desc">
+            <view>8年以上理财领域实战经验</view>
+            <view>曾服务超600位用户定制保险方案</view>
+            <view>解决预算较充足或身体状况不佳或已有保单处理建议</view>
+            <view>除保险外，有孩子教育金，闲钱投资，稳健资产配置等意愿</view>
+            <view>初步电话沟通及答疑时间合计1.5小时</view>
+            <view>出方案后72小时可咨询（含周末）</view>
+            <view>可选择两次电话免费沟通</view>
+            <view>一年内一次免费复盘</view>
+            <view>已有保单处理建议3份以下免费，超过3份，每份99元</view>
+            <view>沟通时间：提前预约，时间灵活</view>
+            <view>999元交到一个很懂理财的财务管家，简直太划算啦！</view>
+        </view>
+    </view>
+
+    <!--<view class="btn-section" bindtap="goToRouter" data-url="/pages/plain/order">-->
+        <!--定制保障方案-->
+    <!--</view>-->
+</view>
+</template>
+<style lang="scss">
+
+.page {
+    width: 100%;
+    display: block;
+    background-color: rgb(242,242,242);
+    padding-bottom: 40rpx;
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.first-section{
+    margin-top: 20rpx;
+    padding: 20rpx;
+    background-color: white;
+    .title{
+        font-size: 16px;
+        color: rgb(242,151,2);
+    }
+    .desc{
+        font-size: 14px;
+        margin-top: 20rpx;
+    }
+}
+
+.second-section{
+    background-color: white;
+    .title{
+        text-align: center;
+        margin-top: 20rpx;
+        padding-top: 40rpx;
+        padding-bottom: 20rpx;
+        font-size: 22px;
+        font-weight: bold;
+    }
+    .process{
+        margin-top: 20rpx;
+        .common{
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 0rpx 20rpx 0 20rpx;
+            .img{
+                height: 100rpx;
+                image{
+                    width: 100rpx;
+                    height: 100rpx;
+                }
+            }
+            .desc{
+                margin-left: 40rpx;
+                font-size: 14px;
+                .sub{
+                    font-size: 12px;
+                    color: rgb(164,164,164);
+                }
+            }
+        }
+        .line{
+            height: 40rpx;
+            image{
+                width: 2px;
+                height: 40rpx;
+                position:relative;
+                left:64rpx;
+            }
+        }
+    }
+}
+
+.third-section{
+    margin-top: 20rpx;
+    background-color: white;
+    padding: 10rpx 20rpx 20rpx 20rpx;
+    .column{
+        margin-top: 20rpx;
+        padding: 20rpx;
+        display: flex;
+        justify-content: space-between;
+        background-color: rgb(255,249,239);
+        .ava{
+            height: 65rpx;
+            image{
+                width:75rpx;
+                height:65rpx;
+            }
+        }
+        .info{
+            width: 325rpx;
+            margin-left: 10rpx;
+            .title{
+                font-size: 16px;
+                font-weight: bold;
+            }
+            .sub{
+                font-size: 12px;
+                color: rgb(163,165,164);
+            }
+        }
+        .price{
+            font-size: 14px;
+            color: rgb(241,150,1);
+        }
+        .btn{
+            background-color: rgb(241,150,1);
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            border-radius: 8px;
+            height: 73rpx;
+        }
+    }
+    .desc{
+        font-size: 12px;
+        color: rgb(164,164,164);
+        text-align: center;
+        margin: 30rpx 0 30rpx 0;
+        line-height: 1.8888;
+    }
+}
+
+.btn-section{
+    width: 80%;
+    margin: 40rpx auto 0 auto;
+    background-color: rgb(241,150,1);
+    color: white;
+    padding: 20rpx;
+    border-radius: 24px;
+    text-align: center;
+}
+
+</style>

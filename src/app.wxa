@@ -1,0 +1,97 @@
+<script>
+import {wxa, App} from '@wxa/core';
+
+@App
+class Main {
+    constructor() {
+        this.globalData = {
+            httpUrl:'https://www.beixinbm.com/beixin'
+        }
+    }
+}
+
+wxa.launchApp(Main);
+</script>
+<config>
+{
+    "pages": [
+        "pages/index",
+        "pages/plain/index",
+        "pages/insurance/index",
+        "pages/personal/index",
+        "pages/personal/info",
+        "pages/order/index",
+        "pages/family/index",
+        "pages/family/info",
+        "pages/course/index",
+        "pages/about/index",
+        "pages/news/list",
+        "pages/news/detail",
+        "pages/insuranceNews/list",
+        "pages/course/list",
+        "pages/course/detail",
+        "pages/course/pay",
+        "pages/course/history",
+        "pages/plain/form",
+        "pages/plain/result",
+        "pages/plain/advisor",
+        "pages/plain/createServer",
+        "pages/plain/order",
+        "pages/insurance/addInsurance",
+        "pages/insurance/remind",
+        "pages/insurance/info",
+        "pages/personal/familyOrder",
+        "pages/plain/plainInfo",
+        "pages/insurance/advisor",
+        "pages/insurance/createServer",
+        "pages/insurance/order",
+        "pages/family/insurance"
+    ],
+    "plugins": {
+        "calendar": {
+            "version": "1.1.3",
+            "provider": "wx92c68dae5a8bb046"
+        },
+        "wxparserPlugin": {
+            "version": "0.2.1",
+            "provider": "wx9d4d4ffa781ff3ac"
+        }
+    },
+    "window": {
+        "navigationBarTitleText": "小贝鑫"
+    },
+    "tabBar": {
+        "selectedColor":"#F19601",
+        "list": [{
+            "pagePath": "pages/index",
+            "text": "首页",
+            "iconPath":"./img/home-icon.png",
+            "selectedIconPath":"./img/home-click-icon.png"
+        }, {
+            "pagePath": "pages/plain/index",
+            "text": "方案定制",
+            "iconPath":"./img/plain-icon.png",
+            "selectedIconPath":"./img/plain-click-icon.png"
+        }, {
+            "pagePath": "pages/insurance/index",
+            "text": "保单整理",
+            "iconPath":"./img/insurance-icon.png",
+            "selectedIconPath":"./img/insurance-click-icon.png"
+        }, {
+            "pagePath": "pages/personal/index",
+            "text": "我的",
+            "iconPath":"./img/my-icon.png",
+            "selectedIconPath":"./img/my-click-icon.png"
+        }
+    ]
+    }
+}
+</config>
+<style lang="scss">
+
+page {
+    width: 100%;
+    /*height: 100%;*/
+    padding-bottom:20rpx;
+}
+</style>

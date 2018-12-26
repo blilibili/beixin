@@ -1,0 +1,621 @@
+<script>
+import {wxa, Page , Debounce} from '@wxa/core';
+import tool from '../../util/tool';
+
+@Page
+class Index {
+    onLoad(options){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        });
+
+        if(options.my){
+            this.setData({
+                isShare:true,
+                comstomerId:options.my
+            });
+
+            this.addMyFamily(this.data.comstomerId);
+        }
+    }
+    onShow(){
+        this.setData({
+            isShare:false,
+            comstomerId:0,
+            top:0,
+            isLoading:false,
+            queryCondition:{
+                page:1,
+                pageSize:30,
+                token:wx.getStorageSync('token'),
+                queryDate:''
+            },
+            default_ava:'../../img/default_ava.png'
+        });
+
+        this.getInsuranceModuleBanner();
+        this.getAllOrderList();
+        this.getMyInfo();
+    }
+    constructor(){
+        this.data = {
+            top:0,
+            orderList:[],
+            familyList:[],
+            imgUrl:'',
+            queryCondition:{
+                page:1,
+                pageSize:30,
+                token:wx.getStorageSync('token')
+            },
+            startX:0,
+            startY:0,
+            showScan:false,
+            remindArr:[]
+        }
+    }
+    //邀请家人
+    addMyFamily(familyId){
+        let currentUserId = wx.getStorageSync('userId');
+        let tmp = {
+            id:currentUserId,
+            child:familyId,
+            token:wx.getStorageSync('token')
+        };
+        tool.httpMethods(tmp , this.app.globalData.httpUrl + '/api/familyApiController/inviteFamily' , '' , 'post')
+            .then((res) => {
+
+                this.getMyInfo();
+            })
+    }
+    //获取保单封面
+    getInsuranceModuleBanner(){
+        tool.httpMethods({} , this.app.globalData.httpUrl + '/api/imageInfoApiController/queryImageInfoCode' , '' , 'post')
+            .then((res) => {
+                let picType = res.resultData[3].type;
+                tool.httpMethods({type:picType} , this.app.globalData.httpUrl + '/api/imageInfoApiController/queryImageInfo' , '' , 'post')
+                    .then((result) => {
+                        result.resultData.list.forEach((v , k) => {
+                            v.imgUrl = this.app.globalData.httpUrl + v.imgUrl;
+                        })
+                        this.setData({
+                            imgUrl:result.resultData.list[0].imgUrl
+                        })
+                    })
+            })
+    }
+
+    AddDays(dayIn) {
+        var date = new Date();
+        var myDate = new Date(date.getTime() + dayIn * 24 * 60 * 60 * 1000);
+        var year = myDate.getFullYear();
+        var month = myDate.getMonth() + 1;
+        var day = myDate.getDate();
+        var CurrentDate = year + "-";
+        if (month >= 10) {
+            CurrentDate = CurrentDate + month + "-";
+        }
+        else {
+            CurrentDate = CurrentDate + "0" + month + "-";
+        }
+        if (day >= 10) {
+            CurrentDate = CurrentDate + day;
+        }
+        else {
+            CurrentDate = CurrentDate + "0" + day;
+        }
+        return CurrentDate;
+    }
+
+        getAllOrderList(){
+        tool.httpMethods(this.data.queryCondition , this.app.globalData.httpUrl + '/api/insurancePolicy/findList' , '' , 'post')
+            .then((res) => {
+                let remindTemp = [];
+                let tmp = res.resultData;
+                //过滤remind为1的信息 弹框提醒
+
+                tmp.forEach((v , k) => {
+                    if(v.type == null){
+                        v.inuranceTypeName = '其他'
+                    }else{
+                        v.inuranceTypeName = tool.insuranceType[v.type]
+                    }
+                    v.isTouchMove = false;
+
+                    if(v.remind == '1'){
+
+                        let remindTimeArr = v.endDate.split('-');
+                        let remindYears = new Date().getFullYear();
+                        let remindMonth = remindTimeArr[1];
+                        let remindDay = remindTimeArr[2];
+                        v.renewals = remindYears + '-' + remindMonth + '-' +remindDay;
+                        remindTemp.push(v);
+                    }
+                })
+
+                if(remindTemp.length == 0){
+                    this.setData({
+                        showScan:false
+                    })
+                }else{
+                    this.setData({
+                        showScan:true
+                    })
+                }
+
+
+                this.setData({
+                    orderList:tmp,
+                    isLoading:false,
+                    remindArr:remindTemp
+                })
+            })
+    }
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+
+    getMyInfo(){
+        let id = wx.getStorageSync('userId');
+        let token = wx.getStorageSync('token');
+        tool.httpMethods({id:id , token} , this.app.globalData.httpUrl + '/api/familyApiController/getFamilyList' , '' , 'post')
+                .then((res) => {
+            this.setData({
+                familyList:res.resultData
+            })
+        })
+    }
+
+    @Debounce(500)
+    loadMoreInsurance(e){
+        if(this.data.orderList.length > 9){
+            if(!this.data.isLoading){
+                this.setData({
+                    isLoading:true,
+                    ['queryCondition.pageSize']:this.data.queryCondition.pageSize + 10
+                })
+                this.getAllOrderList();
+            }
+        }
+    }
+
+    onShareAppMessage(){
+        let id = wx.getStorageSync('userId');
+        return {
+            title: '1分钟做好保单整理，专属理财师帮我做保单分析',
+            path: '/pages/insurance/index?my=' + id,
+            imageUrl:'https://www.beixinbm.com/beixin/imgInfo/insuranceConver/u1052.png'
+            // imageUrl:'../../img/share-bg.png'
+        }
+    }
+
+    delInsurance(id){
+        let tmp = {
+            id:id,
+            token:wx.getStorageSync('token')
+        }
+        tool.httpMethods(tmp , this.app.globalData.httpUrl + '/api/insurancePolicy/delete' , '' , 'post')
+            .then((res) => {
+                wx.showToast({
+                    title:'删除成功'
+                })
+            })
+    }
+
+    //手指触摸动作开始 记录起点X坐标
+    touchstart(e) {
+        //开始触摸时 重置所有删除
+        this.data.orderList.forEach(function (v, i) {
+            if (v.isTouchMove)//只操作为true的
+                v.isTouchMove = false;
+        })
+        this.setData({
+            startX: e.changedTouches[0].clientX,
+            startY: e.changedTouches[0].clientY,
+            orderList: this.data.orderList
+        })
+    }
+    //滑动事件处理
+    touchmove(e) {
+        var that = this,
+            index = e.currentTarget.dataset.index,//当前索引
+            startX = that.data.startX,//开始X坐标
+            startY = that.data.startY,//开始Y坐标
+            touchMoveX = e.changedTouches[0].clientX,//滑动变化坐标
+            touchMoveY = e.changedTouches[0].clientY,//滑动变化坐标
+            //获取滑动角度
+            angle = that.angle({ X: startX, Y: startY }, { X: touchMoveX, Y: touchMoveY });
+
+        that.data.orderList.forEach(function (v, i) {
+            v.isTouchMove = false
+            //滑动超过30度角 return
+            if (Math.abs(angle) > 30) return;
+            if (i == index) {
+                if (touchMoveX > startX) //右滑
+                    v.isTouchMove = false
+                else //左滑
+                    v.isTouchMove = true
+            }
+        })
+
+
+        //更新数据
+        that.setData({
+            orderList: that.data.orderList
+        })
+    }
+    /**
+     * 计算滑动角度
+     * @param {Object} start 起点坐标
+     * @param {Object} end 终点坐标
+     */
+    angle(start, end) {
+        var _X = end.X - start.X,
+            _Y = end.Y - start.Y
+        //返回角度 /Math.atan()返回数字的反正切值
+        return 360 * Math.atan(_Y / _X) / (2 * Math.PI);
+    }
+    //删除事件
+    del(e) {
+        this.data.orderList.splice(e.currentTarget.dataset.index, 1);
+        let insuranceId = e.currentTarget.dataset.insuranceid;
+
+        this.delInsurance(insuranceId);
+        this.getAllOrderList();
+
+        this.setData({
+            orderList: this.data.orderList
+        })
+    }
+
+    hidePic(){
+        this.setData({
+            showScan:false
+        })
+    }
+
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "首页"
+}
+</config>
+<template>
+<scroll-view class="page" scroll-y="{{true}}" scroll-top="{{top}}" bindscrolltolower="loadMoreInsurance">
+    <view class="wall" wx:if="{{showScan}}" bindtap="hidePic"></view>
+    <view class="scan" wx:if="{{showScan}}">
+        <scroll-view scroll-y="{{true}}" style="height:800rpx;padding:20rpx;background-color: #F19601;border-radius: 4px;" class="scan-box">
+            <view style="color: white;text-align: center;font-size: 18px;">续费提醒</view>
+            <view wx:for="{{remindArr}}" wx:key="*" style="margin-top:10rpx;border-radius:8px;background-color:white;font-size: 14px;padding: 20rpx 30rpx;text-align: justify;">亲爱的客户，您的保单{{item.policyNo}}续费日期是{{item.renewals}}，为了确保您的权益，请及时存钱续保，如果已经续保，请忽略此信息。</view>
+        </scroll-view>
+    </view>
+
+    <view class="create-plain" data-url="/pages/insurance/createServer?grade=1" bindtap="goToRouter">
+        <image src="../../img/createPlainBtn.png"></image>
+        <text>保单分析</text>
+    </view>
+   <view class="banner">
+        <image mode="widthFix" src="{{imgUrl}}"></image>
+   </view>
+    <view class="insurance-part-family">
+        <view style="margin-left: 10rpx;margin-bottom: 10rpx;display: flex;align-items: center;">
+            <view style="font-size: 14px;">
+                我的家人({{familyList.length || 0}}人)
+            </view>
+            <view data-url="/pages/family/index" bindtap="goToRouter"><image src="../../img/setting.png" style="width: 30rpx;height: 30rpx;margin-left: 10rpx;"></image></view>
+            <view style="font-size: 14px;margin-left: 20rpx;color:#909399;" data-url="/pages/family/index" bindtap="goToRouter">查看家人保单</view>
+        </view>
+
+            <view class="insurance-part-family-ava">
+                <scroll-view scroll-x="{{true}}" style="width: 60%;margin: 0 auto;">
+                    <view style="display: flex;">
+                        <view class="ava-btn" wx:for="{{familyList}}" wx:key="*">
+                            <view style="height: 100rpx;">
+                                <image src="{{item.avater || default_ava}}" style="border-radius: 25px;width: 100rpx;height: 100rpx;border: 1px solid lightgrey;"></image>
+                            </view>
+                            <text style="font-size: 12px;">{{item.name || '暂无名称'}}</text>
+                        </view>
+                    </view>
+                </scroll-view>
+                <view class="add-btn">
+                    <button class="invite-more" style="background-color: transparent;height:100rpx;" open-type="share">
+                        <image src="../../img/add-friends.png"></image>
+                    </button>
+                    <view style="font-size: 12px;color: rgb(164,164,164);text-align: center;position: relative;top: 14rpx;">让家人知道</view>
+                </view>
+                <view class="add-btn" bindtap="goToRouter" data-url="/pages/insurance/remind">
+                    <image src="../../img/insurance/notice.png"></image>
+                    <view style="font-size: 12px;text-align: center;color: rgb(164,164,164);position: relative;top: 4rpx;">保单提醒</view>
+                </view>
+            </view>
+    </view>
+    <view class="insurance-part-family-insurance">
+        <view class="insurance-part-family-order-title">家庭保单({{orderList.length || 0}})</view>
+        <view data-index="{{index}}" class="family-border touch-item {{item.isTouchMove ? 'touch-move-active' : ''}}" bindtouchstart="touchstart" bindtouchmove="touchmove" wx:for="{{orderList}}" wx:key="{{index}}" bindtap="goToRouter" data-url="/pages/insurance/info?id={{item.id}}">
+            <view class="content">
+                <view class="family-title">
+                    <view style="display: flex;align-items: center;">
+                        <view class="family-other">{{item.inuranceTypeName}}</view>
+                        <view class="family-other-titles">{{item.insuranceName}}</view>
+                    </view>
+
+                    <view class="insurance-status-icon">
+                        <image wx:if="{{item.status == 0}}" src="../../img/insurancing.png" style="width: 140rpx;height: 64rpx;"></image>
+
+                        <image wx:if="{{item.status == 1}}" src="../../img/insurancing.png" style="width: 140rpx;height: 64rpx;"></image>
+
+                        <image wx:if="{{item.status == 2}}" src="../../img/outdate.png" style="width: 140rpx;height: 64rpx;"></image>
+
+                        <image wx:if="{{item.status == 3}}" src="../../img/outdating.png" style="width: 140rpx;height: 64rpx;"></image>
+
+                    </view>
+                </view>
+                <view class="insurance-family-content">
+                    <view>被保人：</view>
+                    <view>{{item.insuredName}}</view>
+                </view>
+                <view class="insurance-family-content">
+                    <view>保费：</view>
+                    <view>{{item.insuredAmount}}</view>
+                </view>
+                <view class="insurance-family-content">
+                    <view>保障时间：</view>
+                    <view>{{item.beginDate}}至{{item.endDate}}</view>
+                </view>
+            </view>
+            <view class="del" catchtap="del" data-insuranceId="{{item.id}}" data-index="{{index}}">删除</view>
+        </view>
+    </view>
+    <view class="add-insurance-btn" bindtap="goToRouter" data-url="/pages/insurance/addInsurance">
+        <image src="../../img/add-insurance-btn.png"></image>
+    </view>
+</scroll-view>
+</template>
+<style lang="scss">
+    .wall{
+        width: 100%;
+        height: 100vh;
+        background-color: rgba(0,0,0,0.4);
+        position: fixed;
+        top: 0;
+        z-index: 100;
+    }
+    .scan{
+        position:fixed;
+        z-index:101;
+        top:50%;
+        margin-top:-450rpx;
+        left:50%;
+        margin-left:-344rpx;
+        width:650rpx;
+        .scan-box{
+            background-color:white;
+            text-align:center;
+
+
+            image{
+                width: 600rpx;
+                height: 600rpx;
+            }
+        }
+    }
+
+    .del-btn{
+        width: 200rpx;
+        padding: 10rpx 0;
+        text-align: center;
+        /*border: 1px solid rgb(164,164,164);*/
+        background-color: rgb(242,150,0);
+        color: white;
+        border-radius: 8px;
+    }
+    .create-plain image , .create-plain text{
+        position:absolute;
+        top:385rpx;
+        right:39rpx;
+        width:220rpx;
+        height:59rpx;
+    }
+    .create-plain text{
+        font-size:18px;
+        color:white;
+        text-align:center;
+        padding-top:5rpx;
+        font-weight: 400;
+        padding-right: 15rpx;
+    }
+    button::after{ border: none; }
+.banner{
+    image{
+        width: 100%;
+    }
+}
+.page {
+    width: 100%;
+    height: 100vh;
+    display: block;
+    overflow: auto;
+    background-color: rgb(242,242,242);
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.header-banner{
+    width: 100%;
+    height: 340rpx;
+}
+.financial-menu , .second-part {
+    width: 99%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 20rpx 0;
+    background-color: white;
+    margin: 0 auto;
+    border: 1px solid lightgrey;
+}
+.three-part{
+    width: 99%;
+    display: block;
+    margin: 10rpx auto 0 auto;
+    background-color: white;
+    border: 1px solid lightgrey;
+}
+.part-three-title{
+    padding: 15rpx;
+    display: flex;
+    justify-content: space-between;
+}
+
+.part-three-content{
+    margin-top: 20rpx;
+    display: flex;
+    justify-content: space-around;
+}
+.second-part {
+    margin-top: 10rpx;
+    padding: 40rpx 0;
+}
+.financial-menu text{
+    font-size: 14px;
+}
+.f-btn{
+    display: block;
+}
+.f-btn view {
+    text-align: center;
+}
+.second-part-strong{
+    font-weight: bold;
+    font-size: 14px;
+}
+.second-part-desc{
+    font-size: 12px;
+}
+ .insurance-part-family{
+     background-color:white;
+ }
+ .insurance-part-family-ava{
+     display: flex;
+     justify-content: space-between;
+     padding: 20rpx 20rpx 20rpx 20rpx;
+     /*width: 100%;*/
+     .ava-btn{
+         margin-left: 20rpx;
+         width: 160rpx;
+     }
+     .add-btn{
+         margin-right: 25rpx;
+         button{
+             border: 0;
+             padding: 0;
+             margin: 0;
+         }
+         image{
+             width: 100rpx;
+             height: 100rpx;
+         }
+     }
+     /*&:not(:first-child){*/
+         /*margin-left: 20rpx;*/
+     /*}*/
+ }
+ .ava-btn{
+     text-align: center;
+ }
+ .insurance-part-family-insurance{
+     background-color: white;
+     width: 97%;
+     margin:20rpx auto;
+     .insurance-part-family-order-title{
+         font-size: 14px;
+         font-weight: bold;
+         padding: 20rpx 0;
+         margin-left: 20rpx;
+     }
+     .family-border{
+         border-bottom:1px solid rgb(209,209,209);
+         margin-top: 10rpx;
+         background-color: white;
+         padding: 20rpx;
+         .family-title{
+             display: flex;
+             justify-content: space-between;
+         }
+         .family-other{
+             border: 1px solid  rgb(241,150,1);
+             padding: 5rpx 20rpx;
+             color:  rgb(241,150,1);
+             font-size: 12px;
+         }
+         .family-other-titles{
+             font-size: 14px;
+             font-weight: bold;
+             margin-left: 20rpx;
+         }
+
+         .insurance-family-content{
+             display: flex;
+             justify-content:space-between;
+             font-size: 14px;
+             color: rgb(164,164,164);
+             line-height: 1.8888;
+         }
+     }
+ }
+
+ .add-insurance-btn{
+     position: fixed;
+     right:22rpx;
+     bottom:23rpx;
+     image{
+         width: 100rpx;
+         height: 100rpx;
+     }
+ }
+
+
+    .touch-item {
+        font-size: 14px;
+        display: flex;
+        justify-content: space-between;
+        border-bottom:1px solid #ccc;
+        width: 100%;
+        overflow: hidden
+    }
+    .content {
+        width: 100%;
+        padding: 10px;
+        line-height: 22px;
+        margin-right:0;
+        -webkit-transition: all 0.4s;
+        transition: all 0.4s;
+        -webkit-transform: translateX(90px);
+        transform: translateX(90px);
+        margin-left: -200rpx
+    }
+    .del {
+        background-color: orangered;
+        width: 90px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        -webkit-transform: translateX(90px);
+        transform: translateX(90px);
+        -webkit-transition: all 0.4s;
+        transition: all 0.4s;
+    }
+    .touch-move-active .content,
+    .touch-move-active .del {
+        -webkit-transform: translateX(0);
+        transform: translateX(0);
+    }
+
+</style>

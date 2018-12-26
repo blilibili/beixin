@@ -1,0 +1,409 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class Index {
+    constructor(){
+        this.data = {
+            isPay:false,
+            grade:1,
+            money:''
+        }
+    }
+    onLoad(options){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+        wx.setNavigationBarTitle({
+            title:'确认订单'
+        })
+        let money = 0;
+        if(options.isPay){
+            if(options.grade == 1){
+                money = 99
+            }else if(options.grade == 2){
+                money = 399
+            }else if(options.grade == 3){
+                money = 999
+            }
+            this.setData({
+                isPay:true,
+                grade:options.grade,
+                money:money
+            })
+        }else{
+            if(options.grade == 1){
+                money = 99
+            }else if(options.grade == 2){
+                money = 399
+            }else if(options.grade == 3){
+                money = 999
+            }
+            this.setData({
+                isPay:false,
+                grade:options.grade,
+                money:money
+            })
+        }
+    }
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+
+    goToPay(e){
+        let formId = e.detail.formId;
+
+        let tmp = {
+            token:wx.getStorageSync('token'),
+            type:'2',
+            typeId:this.data.grade,
+            amount:this.data.money,
+            nickName:'',
+            avatar:''
+        }
+        tool.httpMethods(tmp , this.app.globalData.httpUrl + '/api/orderApiController/save' , '' , 'post')
+            .then((res) => {
+                if(res.resultCode == '10000'){
+                    let orderId = res.resultData.serialNumber;
+                    let time = tool.createTimeStamp().toString();
+                    let nstr = tool.createNonceStr();
+                    let temp = {
+                        token:wx.getStorageSync('token'),
+                        openid:wx.getStorageSync('openId'),
+                        body:'宝妈理财师定制保险方案',
+                        orderId:orderId,
+                        totalFee:this.data.money,
+                        attach:0,
+                        formId:formId
+                    }
+                    //发起微信支付 1516923291
+                    tool.httpMethods(temp , this.app.globalData.httpUrl + '/api/payApiController/tenpayAddOrderJSAPI' , '' , 'post')
+                        .then((result) => {
+                            let prepayId = result.resultData.prepayid;
+                            wx.requestPayment({
+                                timeStamp:time,
+                                nonceStr:nstr,
+                                package:'prepay_id='+ prepayId,
+                                signType:'MD5',
+                                paySign:tool.md5Key(nstr , prepayId , time),
+                                success:(res) => {
+                                    wx.showToast({
+                                        title:'支付成功',
+                                        success:()=>{
+                                            this.router.switch('/pages/plain/index');
+                                        }
+                                    })
+                                },
+                                fail(res){
+                                    wx.showToast({
+                                        title:'取消支付',
+                                        success:()=>{
+                                            this.router.switch('/pages/plain/index');
+                                        }
+                                    })
+                                },
+                                complete(res){
+
+                                }
+                            })
+                        })
+                }else{
+                    wx.showToast({
+                        title:res.resultMessage
+                    });
+                }
+            })
+    }
+
+
+
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "首页"
+}
+</config>
+<template>
+<view class="page">
+    <view class="title">
+        <view class="ava">
+            <image mode="widthFix" src="../../img/plain/info.png"></image>
+        </view>
+        <view class="words">
+            宝妈理财师出方案后，一周内仍可咨询，逾期无效
+        </view>
+    </view>
+
+    <view class="price" wx:if="{{grade == 1}}">
+        <view class="first">
+            <view class="ava">
+                <image src="../../img/plain/jellery.png"></image>
+            </view>
+            <view class="info">
+                <view class="sub-title">认证宝妈理财师</view>
+                <view class="desc">适合年收入20万以下的家庭</view>
+            </view>
+        </view>
+        <view class="second">
+            ¥{{money}}
+        </view>
+    </view>
+
+    <view class="price" wx:if="{{grade == 2}}">
+        <view class="first">
+            <view class="ava">
+                <image src="../../img/plain/jellery.png"></image>
+            </view>
+            <view class="info">
+                <view class="sub-title">中级宝妈理财师</view>
+                <view class="desc">适合中等级收入家庭</view>
+            </view>
+        </view>
+        <view class="second">
+            ¥{{money}}
+        </view>
+    </view>
+
+
+    <view class="price" wx:if="{{grade == 3}}">
+        <view class="first">
+            <view class="ava">
+                <image src="../../img/plain/jellery.png"></image>
+            </view>
+            <view class="info">
+                <view class="sub-title">高级宝妈理财师</view>
+                <view class="desc">适合中高等收入家庭</view>
+            </view>
+        </view>
+        <view class="second">
+            ¥{{money}}
+        </view>
+    </view>
+
+    <view class="price-sum">
+        <view class="words">订单合计</view>
+        <view class="price-words">¥{{money}}</view>
+    </view>
+
+    <view class="second-section">
+        <view class="title">服务流程</view>
+        <view class="process">
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num1.png"></image>
+                </view>
+                <view class="desc">用户支付成功</view>
+            </view>
+            <view class="line">
+                <image src="../../img/plain/line.jpg"></image>
+            </view>
+
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num2.png"></image>
+                </view>
+                <view class="desc">
+                    <view class="main">宝妈理财师初步电话沟通</view>
+                    <view class="sub">进一步了解和确认财务状况和保险需求</view>
+                </view>
+            </view>
+            <view class="line">
+                <image src="../../img/plain/line.jpg"></image>
+            </view>
+
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num3.png"></image>
+                </view>
+                <view class="desc">宝妈理财师定制保险方案</view>
+            </view>
+            <view class="line">
+                <image src="../../img/plain/line.jpg"></image>
+            </view>
+
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num4.png"></image>
+                </view>
+                <view class="desc">宝妈理财师进行方案解析和答疑及异议处理</view>
+            </view>
+            <view class="line">
+                <image src="../../img/plain/line.jpg"></image>
+            </view>
+
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num5.png"></image>
+                </view>
+                <view class="desc">确认最终保险方案</view>
+            </view>
+            <view class="line">
+                <image src="../../img/plain/line.jpg"></image>
+            </view>
+
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num6.png"></image>
+                </view>
+                <view class="desc">保险方案落地</view>
+            </view>
+            <view class="line">
+                <image src="../../img/plain/line.jpg"></image>
+            </view>
+
+            <view class="common">
+                <view class="img">
+                    <image src="../../img/plain/num7.png"></image>
+                </view>
+                <view class="desc">完成服务</view>
+            </view>
+
+        </view>
+    </view>
+
+    <form bindsubmit="goToPay" report-submit="{{true}}" wx:if="{{!isPay}}">
+        <button class="pay-btn" formType="submit">立即支付</button>
+    </form>
+</view>
+</template>
+<style lang="scss">
+    .second-section{
+        background-color: white;
+        padding-bottom: 20rpx;
+        .title{
+            text-align: center;
+            margin-top: 20rpx;
+            padding-top: 40rpx;
+            padding-bottom: 20rpx;
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .process{
+            margin-top: 20rpx;
+            .common{
+                display: flex;
+                justify-content: flex-start;
+                align-items: center;
+                padding: 0rpx 20rpx 0 20rpx;
+                .img{
+                    height: 100rpx;
+                    image{
+                        width: 100rpx;
+                        height: 100rpx;
+                    }
+                }
+                .desc{
+                    margin-left: 40rpx;
+                    font-size: 14px;
+                    .sub{
+                        font-size: 12px;
+                        color: rgb(164,164,164);
+                    }
+                }
+            }
+            .line{
+                height: 40rpx;
+                image{
+                    width: 2px;
+                    height: 40rpx;
+                    position:relative;
+                    left:64rpx;
+                }
+            }
+        }
+    }
+.price-sum{
+    background-color: white;
+    padding: 20rpx 10rpx;
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20rpx;
+    .words{
+        font-size: 16px;
+    }
+    .price-words{
+        color:#f19601;
+        font-size: 16px;
+    }
+}
+.price{
+    padding: 30rpx 10rpx;
+    display: flex;
+    justify-content: space-around;
+    background-color: white;
+    align-items: flex-end;
+    .first{
+        display: flex;
+        align-items: center;
+        .ava{
+            image{
+                width: 100rpx;
+                height: 100rpx;
+            }
+        }
+        .info{
+            margin-left: 20rpx;
+            .sub-title{
+                font-size: 16px;
+                font-weight: 300;
+            }
+            .desc{
+                font-size: 12px;
+                color: rgb(164,164,164);
+                margin-top: 20rpx;
+            }
+        }
+    }
+    .second{
+        font-size:14px;
+        background-color:#f19601;
+        color:white;
+        width:126rpx;
+        text-align:center;
+        padding:12rpx;
+        /*height:15px;*/
+        border-radius:8px;
+
+    }
+}
+
+.page {
+    width: 100%;
+    display: block;
+    background-color: rgb(242,242,242);
+    padding-bottom: 10rpx;
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.title{
+    display: flex;
+    justify-content: center;
+    background-color: white;
+    padding: 20rpx 0;
+    align-items: center;
+    .ava{
+        image{
+            width: 25rpx;
+            height: 25rpx;
+        }
+    }
+    .words{
+        margin-left: 10rpx;
+        font-size: 12px;
+    }
+}
+    .pay-btn{
+        margin: 30rpx auto;
+        width: 600rpx;
+        background-color: rgb(241,150,1);
+        color: white;
+        border-radius: 24px;
+        text-align: center;
+    }
+</style>

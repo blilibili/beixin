@@ -1,0 +1,559 @@
+<script>
+import {wxa, Page , Debounce} from '@wxa/core';
+import tool from '../util/tool'
+@Page
+class Index {
+    constructor(){
+        this.data = {
+            bannerList:[],
+            licaiList:[],
+            licaiArticleList:[],
+            showModal:false,
+            top:0,
+            queryCondition:{
+                page:1,
+                pageSize:10
+            },
+            isLogin:true,
+            submitForm:{
+                name:'',
+                birthday :'',
+                phone:'',
+                idCard:'',
+                avater:'../../img/default_ava.png',
+                nickName:''
+            }
+        }
+    }
+    onLoad(options) {
+        //清空登录信息
+        wx.clearStorageSync()
+        //判断是否注册过手机号
+        this.setData({
+            queryCondition:{
+                page:1,
+                pageSize:10
+            },
+            top:0
+        })
+        //获取授权
+       this.getSetting();
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+        if(options.articleId){
+            this.router.push('/pages/news/detail?articleId=' + options.articleId);
+        }
+        if(options.courseId){
+            this.router.push('/pages/course/detail?id=' + options.courseId);
+        }
+        if(options.historyId){
+            this.router.push('/pages/course/history?id=' + options.historyId);
+        }
+        if(options.my){
+            this.addMyFamily(options.my);
+            //this.router.push('/pages/personal/info?my=' + options.my);
+        }
+        if(options.news){
+            this.router.push('/pages/news/list');
+        }
+
+    }
+
+    onShow(){
+        tool.httpMethods({} , this.app.globalData.httpUrl + '/api/imageInfoApiController/queryImageInfoCode' , '' , 'post')
+            .then((res) => {
+                let picType = res.resultData[0].type;
+                tool.httpMethods({type:picType} , this.app.globalData.httpUrl + '/api/imageInfoApiController/queryImageInfo' , '' , 'post')
+                    .then((result) => {
+                        result.resultData.list.forEach((v , k) => {
+                            v.imgUrl = this.app.globalData.httpUrl + v.imgUrl;
+                        })
+                        this.setData({
+                            bannerList:result.resultData.list
+                        })
+                        let token = wx.getStorageSync('token');
+
+                        //获取新闻 理财荟列表
+                        // this.getLicaiList(token);
+                        // this.getNewsList();
+
+                        //获取理财启蒙列表
+                        this.getLicaiNewsList();
+                    })
+            })
+    }
+
+    //家人绑定
+    addMyFamily(familyId){
+        let currentUserId = wx.getStorageSync('userId');
+        let tmp = {
+            id:currentUserId,
+            child:familyId,
+            token:wx.getStorageSync('token')
+        };
+        tool.httpMethods(tmp , this.app.globalData.httpUrl + '/api/familyApiController/inviteFamily' , '' , 'post')
+            .then((res) => {
+
+            })
+    }
+
+    getSetting() {
+        // 查看是否授权
+        // 查看是否授权
+        wx.getSetting({
+            success :(res) => {
+                if (res.authSetting['scope.userInfo']) {
+                    // 已经授权，可以直接调用 getUserInfo 获取头像昵称
+                    // this.setData({
+                    //     isCanLoadUserInfo:true
+                    // })
+                    // wx.getUserInfo({
+                    //     success: (res) => {
+                    //         this.setData({
+                    //             ['submitForm.avater']:res.userInfo.avatarUrl,
+                    //             ['submitForm.name']:res.userInfo.nickName,
+                    //             ['submitForm.nickName']:res.userInfo.nickName
+                    //         })
+                    //     }
+                    // })
+                    this.setData({
+                        isLogin:true
+                    })
+
+                }else{
+                    this.setData({
+                        isLogin:false
+                    })
+                }
+            }
+        })
+    }
+
+    changeImgUrl(arr){
+        arr.forEach((v , k) => {
+            v.imgUrl = this.app.globalData.httpUrl + v.imgUrl
+        })
+    }
+
+    getLicaiList(token){
+        //获取理财会列表
+        let tmp = this.data.queryCondition;
+        tmp.token = token
+        tool.httpMethods(tmp , this.app.globalData.httpUrl + '/api/courseApiController/page' , '' , 'post')
+            .then((res) => {
+
+                res.resultData.records.forEach((v , k) => {
+                    v.imgUrl = this.app.globalData.httpUrl + v.imgUrl
+                })
+                this.setData({
+                    licaiList:res.resultData.records
+                })
+            })
+    }
+
+    //判断是否信息完整
+    getIsUserInfoComplete(){
+        let id = wx.getStorageSync('userId');
+        let token = wx.getStorageSync('token');
+        let notice = wx.getStorageSync('isNotice') || false
+        tool.httpMethods({id:id , token} , this.app.globalData.httpUrl + '/api/customerApiController/getCustomerInfo' , '' , 'post')
+                .then((res) => {
+                if(res.resultData.status == 1 && !notice){
+                    wx.showToast({
+                        title:'请输入手机号',
+                        icon:'none'
+                    })
+                    wx.setStorageSync('isNotice', true)
+                }
+        })
+    }
+
+    //获取理财启蒙
+    getLicaiNewsList(){
+        tool.httpMethods({} , this.app.globalData.httpUrl + '/api/articleApiController/queryImageInfoCode' , '' , 'post')
+            .then((res) => {
+                //获取理财会列表
+                let tmp = this.data.queryCondition;
+                let type = res.resultData[1].type;
+
+                tmp.type = type;
+                tool.httpMethods(tmp , this.app.globalData.httpUrl + '/api/articleApiController/queryImageInfo' , '' , 'post')
+                    .then((result) => {
+                        result.resultData.list.forEach((v , k) => {
+                            v.imgUrl = this.app.globalData.httpUrl + v.imgUrl;
+                        })
+                        this.setData({
+                            licaiArticleList:result.resultData.list
+                        })
+
+                        //this.getIsUserInfoComplete();
+                    })
+            })
+    }
+    getNewsList(){
+        tool.httpMethods({} , this.app.globalData.httpUrl + '/api/articleApiController/queryImageInfoCode' , '' , 'post')
+                .then((res) => {
+                    let type = res.resultData[0].type
+                    tool.httpMethods({type:type} , this.app.globalData.httpUrl + '/api/articleApiController/queryImageInfo' , '' , 'post')
+                        .then((result) => {
+
+                    })
+                })
+    }
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+
+    goToTabPage(e){
+        let url = e.currentTarget.dataset.url;
+        wx.switchTab({
+            url:url
+        })
+    }
+
+
+    goToJoin(e){
+        let canBuy = e.currentTarget.dataset.buy;
+        let id = e.currentTarget.dataset.id;
+        // this.router.push('/pages/course/detail?id=' + id + '&canbuy=' + canBuy);
+        this.router.push('/pages/news/detail?articleId=' + id);
+    }
+
+    onShareAppMessage(){
+        let id = wx.getStorageSync('userId');
+        return {
+            title: '每天学一点,理财不冒险',
+            path: '/pages/index?articleId=' + this.data.article.id,
+            imageUrl:'https://www.beixinbm.com/beixin/imgInfo/insuranceConver/u1052.png'
+        }
+    }
+    @Debounce(500)
+    loadMoreInsurance(e){
+        if(this.data.licaiArticleList.length > 9){
+            this.setData({
+                isLoading:true,
+                ['queryCondition.pageSize']:this.data.queryCondition.pageSize + 5
+            });
+            this.getLicaiNewsList();
+        }
+    }
+
+    onGotUserInfo(e){
+        if(!e.detail.userInfo){
+
+        }else{
+            let tmp = e.detail.userInfo
+
+            this.setData({
+                ['submitForm.avater']:tmp.avatarUrl,
+                ['submitForm.name']:tmp.nickName,
+                ['submitForm.nickName']:tmp.nickName,
+                isLogin:true
+            })
+
+            this.saveCustomerInfo();
+        }
+    }
+
+    saveCustomerInfo(){
+        let tmp = this.data.submitForm;
+        let userid = wx.getStorageSync('userId');
+        tmp.id = userid;
+        tmp.token = wx.getStorageSync('token');
+
+        tool.httpMethods(tmp , this.app.globalData.httpUrl + '/api/customerApiController/saveCustomerInfo' , '' , 'post')
+            .then((res) => {
+                wx.showModal({
+                    title:'提示',
+                    content:'请完善手机信息',
+                    showCancel:false
+                })
+            })
+    }
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "首页",
+    "usingComponents": {
+        "modal": "./component/modal"
+    }
+}
+</config>
+<template>
+<view class="wall" wx:if="{{!isLogin}}"></view>
+    <view class="scan" wx:if="{{!isLogin}}">
+        <view class="scan-box scan-title">
+            <view style="font-size: 14px;margin-top: 10rpx;font-weight: bold;">小贝鑫授权</view>
+        </view>
+
+        <view class="scan-content">
+            <button class="btn"  open-type="getUserInfo" lang="zh_CN" bindgetuserinfo="onGotUserInfo">登陆授权</button>
+        </view>
+    </view>
+<scroll-view class="page" scroll-y="{{true}}" scroll-top="{{top}}" bindscrolltolower="loadMoreInsurance">
+    <view class="header-banner">
+        <swiper indicator-dots="{{false}}"
+                style="height: 380rpx;"
+                autoplay="{{false}}" interval="{{2000}}">
+            <block wx:for="{{bannerList}}" wx:key="*">
+                <swiper-item>
+                    <image mode="widthFix" src="{{item.imgUrl}}" class="slide-image" width="355" />
+                </swiper-item>
+            </block>
+        </swiper>
+    </view>
+    <view class="financial-menu">
+        <view bindtap="goToRouter" data-url="/pages/news/list" class="f-btn">
+            <view>
+                <image src="../img/f-icon1.png" style="width: 60rpx;height: 60rpx;"></image>
+            </view>
+            <text>理财日报</text>
+        </view>
+        <view bindtap="goToRouter" data-url="/pages/insuranceNews/list" class="f-btn">
+            <view>
+                <image src="../img/f-icon2.png" style="width: 60rpx;height: 60rpx;"></image>
+            </view>
+            <text>理财启蒙</text>
+        </view>
+        <view bindtap="goToRouter" data-url="/pages/course/list" class="f-btn">
+            <view>
+                <image src="../img/f-icon3.png" style="width: 60rpx;height: 60rpx;"></image>
+            </view>
+            <text>理财荟</text>
+        </view>
+    </view>
+
+    <view class="second-part">
+        <view class="f-btn" bindtap="goToTabPage" data-url="/pages/plain/index">
+            <view>
+                <image src="../img/add-plain.png" style="width: 130rpx;height: 120rpx;"></image>
+            </view>
+            <view class="adjustment-img">
+                <text class="second-part-strong">方案定制</text>
+            </view>
+            <view class="adjustment-img">
+                <text class="second-part-desc">专属宝宝保险方案推荐</text>
+            </view>
+        </view>
+
+        <view class="f-btn" bindtap="goToTabPage" data-url="/pages/insurance/index">
+            <view>
+                <image src="../img/insurance-sort.png" style="width: 130rpx;height: 120rpx;"></image>
+            </view>
+            <view class="adjustment-img">
+                <text class="second-part-strong">保单整理</text>
+            </view>
+            <view class="adjustment-img">
+                <text class="second-part-desc">您掌中的保单管理神器</text>
+            </view>
+        </view>
+    </view>
+
+    <view class="three-part">
+        <view class="part-three-title">
+            <span style="font-size: 16px;">理财荟启蒙</span>
+            <span style="font-size: 14px;color: #F19601;" bindtap="goToRouter" data-url="/pages/insuranceNews/list">更多</span>
+        </view>
+        <view bindtap="goToJoin" data-id="{{item.id}}" data-buy="{{item.canBuy}}" class="part-three-content" wx:for="{{licaiArticleList}}" wx:key="*">
+            <view>
+                <image mode="widthFix" src="{{item.imgUrl}}" style="width: 200rpx;"></image>
+            </view>
+            <view class="desc">
+                <view style="height: 96rpx;display: flex;justify-content: space-between;">
+                    <text class="second-part-strong" style="vertical-align: text-top;margin-right: 40rpx;">{{item.title}}</text>
+                    <!--<text style="font-size: 14px;color: #F19601;vertical-align: text-top;">¥{{item.amount}}</text>-->
+                </view>
+                <view class="bottom">
+                    <view>
+                        <view class="second-part-desc">{{item.subTitle}}</view>
+                        <view class="second-part-desc">{{item.classTime}}</view>
+                    </view>
+                    <!--<button bindtap="goToRouter" wx:if="{{item.canBuy}}" data-url="/pages/course/detail?id={{item.id}}" class="course-join-btn">立即报名</button>-->
+                    <!--<button bindtap="goToRouter" style="background-color: rgb(164,164,164);color: white;" wx:if="{{!item.canBuy}}" disabled="{{true}}" data-url="/pages/course/detail?id={{item.id}}" class="course-join-btn">已报名</button>-->
+
+                </view>
+            </view>
+        </view>
+    </view>
+</scroll-view>
+</template>
+<style lang="scss">
+    .scan{
+        border-radius: 6px;
+        position:fixed;
+        z-index:101;
+        top:50%;
+        margin-top:-150rpx;
+        left:50%;
+        margin-left:-191rpx;
+        width:400rpx;
+        background-color: white;
+        .scan-box{
+            padding: 20rpx;
+            text-align:center;
+
+            image{
+                width: 600rpx;
+                height: 600rpx;
+            }
+        }
+
+        .scan-title{
+            border-bottom: 1px solid lightgrey;
+        }
+
+        .scan-content{
+            .btn{
+                line-height: 1.33333;
+                width:280rpx;
+                padding:5px 0;
+                text-align:center;
+                font-size:14px;
+                margin:20rpx auto;
+                background-color: #F19601;
+                color: white;
+                border-radius: 6px;
+            }
+        }
+    }
+.wall{
+    width: 100%;
+    height: 100vh;
+    background-color: rgba(0,0,0,0.6);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+}
+/*因为傻逼图片有空白像素所以调整位置*/
+.adjustment-img{
+    position: relative;
+    top: -10rpx;
+}
+.modal-content{
+    width: 100%;
+.title{
+    text-align: center;
+    font-size: 18px;
+    margin-top: 20rpx;
+}
+.body{
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 20rpx;
+}
+}
+.page {
+    width: 100%;
+    height: 100vh;
+    display: block;
+    background-color: rgb(242,242,242);
+    padding-bottom: 10rpx;
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.header-banner{
+    width: 100%;
+    height: 380rpx;
+    .slide-image{
+        width: 100%;
+        height: 380rpx;
+    }
+}
+.financial-menu{
+    padding: 40rpx 0;
+}
+.financial-menu , .second-part {
+    width: 99%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    /*padding: 20rpx 0;*/
+    background-color: white;
+    margin: 0 auto;
+    /*border: 1px solid lightgrey;*/
+}
+.three-part{
+    width: 99%;
+    display: block;
+    background-color: white;
+    /*border: 1px solid lightgrey;*/
+    padding-bottom: 40rpx;
+    margin-bottom: 20rpx;
+    .course-join-btn{
+        font-size: 12px;
+        background-color: #F19601;
+        border-radius: 20;
+        border:0;
+        color: white;
+        margin: 0;
+        position: relative;
+        top: -10rpx;
+    }
+    .close-status-btn{
+        font-size: 12px;
+        border-radius: 20;
+        border:0;
+        color: white;
+        margin: 0;
+        position: relative;
+        top: -10rpx;
+        background-color: rgb(164,164,164) ;
+    }
+}
+.part-three-title{
+    padding: 15rpx;
+    display: flex;
+    justify-content: space-between;
+}
+
+.part-three-content{
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 95%;
+    margin: 20rpx auto 0 auto;
+    .desc{
+        margin-left: 20rpx;
+        width: 540rpx;
+        .bottom{
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+        }
+    }
+}
+.second-part {
+    margin: 25rpx 0;
+    padding: 25rpx 0;
+}
+.financial-menu text{
+    font-size: 14px;
+    position: relative;
+    font-weight: 600;
+}
+.f-btn{
+    display: block;
+}
+.f-btn view {
+    text-align: center;
+}
+.second-part-strong{
+    font-weight: bold;
+    font-size: 14px;
+}
+.second-part-desc{
+    font-size: 12px;
+    position: relative;
+    top: -10rpx;
+    color: rgb(164,164,164);
+}
+</style>

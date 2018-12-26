@@ -1,0 +1,415 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class Index {
+    constructor(){
+        this.data = {
+            analyic:{},
+            showScan:false,
+            weImg:''
+        }
+    }
+    onLoad(){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+        wx.setNavigationBarTitle({
+            title:'定制保障方案'
+        })
+        this.getAnalyResult();
+        this.getWecheatImg();
+    }
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+    goMainBack(){
+        this.router.replace('/pages/plain/form?reload=true');
+    }
+
+    getWecheatImg(){
+        tool.httpMethods({token:wx.getStorageSync('token') , type:'wechatImg'} , this.app.globalData.httpUrl + '/api/imageInfoApiController/queryImageInfo' , '' , 'post')
+            .then((res) => {
+                this.setData({
+                    weImg:this.app.globalData.httpUrl + res.resultData.list[0].imgUrl
+                })
+            })
+    }
+
+    getAnalyResult(){
+        ///api/pgInfo/findpgAnalysis
+        tool.httpMethods({token:wx.getStorageSync('token')} , this.app.globalData.httpUrl + '/api/pgInfo/findpgAnalysis' , '' , 'post')
+            .then((res) =>{
+                this.setData({
+                    analyic:res.resultData
+                })
+            })
+    }
+
+    showQQGroup(){
+        this.setData({
+            showScan:true
+        })
+    }
+
+    hideScan(){
+        this.setData({
+            showScan:false
+        })
+    }
+
+    copyWeNumber(){
+        wx.setClipboardData({
+            data: 'beixinBM',
+            success (res) {
+                wx.getClipboardData({
+                    success (res) {
+                        wx.showToast({
+                            title:'复制成功~'
+                        })
+                    }
+                })
+            }
+        })
+    }
+
+    openWx(){
+        wx.navigateBack({
+
+            delta: 0
+
+        })
+    }
+
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "首页"
+}
+</config>
+<template>
+<view class="page">
+    <view class="wall-bg" wx:if="{{showScan}}" bindtap="hideScan"></view>
+    <view class="scan" wx:if="{{showScan}}">
+        <view class="scan-box">
+            <view style="font-size: 16px;margin-top: 20rpx;">加群助手入群围观</view>
+            <view style="font-size: 14px;color: rgb(164,164,164);margin-top: 20rpx;">看看别人在关注什么！你也可以提问哦~</view>
+            <view style="font-size: 14px;color: rgb(164,164,164);margin-top: 20rpx;">微信号：beixinBM <span style="color: rgb(103,199,191);" bindtap="copyWeNumber">复制</span></view>
+            <image src="{{weImg}}"></image>
+            <!--<view bindtap="openWx" style="font-size: 14px;background-color: rgb(241,150,1);margin-top: 20rpx;padding: 20rpx 0;text-align: center;color: white;">打开微信去添加</view>-->
+        </view>
+    </view>
+    <view wx:for-index="index" wx:for="{{analyic}}" wx:key="*">
+        <view class="first-section">
+            <view class="header">
+                <view class="title">
+                    <image src="../../img/small_people.png"></image>
+                    <view class="words">子女{{index + 1}}</view>
+                </view>
+                <view class="other-title">
+                    子女年交保费：约¥{{item.annualAmount}}元
+                </view>
+            </view>
+
+            <view class="subtitle">
+                <view class="title">
+                    <image src="../../img/balloon.png"></image>
+                    <view class="words">宝妈理财师推荐保障计划</view>
+                </view>
+                <view class="table">
+                    <view class="th">
+                        <view class="td">意外保障</view>
+                        <view class="td">医疗保障</view>
+                        <view class="td">重疾保障</view>
+                        <view class="td">身故保障</view>
+                    </view>
+
+                    <view class="tr">
+                        <view class="td">{{item.accidentProtection}}</view>
+                        <view class="td">{{item.medicalProtection}}</view>
+                        <view class="td">{{item.illnessProtection}}</view>
+                        <view class="td">{{item.deathProtection}}</view>
+                    </view>
+                </view>
+            </view>
+
+            <view class="body">
+                <view class="icon">
+                    <image src="../../img/book.png"></image>
+                </view>
+                <view class="title">方案解读</view>
+                <view class="icon-line">
+                    <image src="../../img/line-icon.png"></image>
+                </view>
+                <view class="content">
+                    <rich-text style="text-align: justify;" space="true" nodes="{{item.programmeDesc }}"></rich-text>
+                </view>
+            </view>
+        </view>
+
+        <view class="second-section">
+            <view class="title">
+                <image src="../../img/f-icon4.png"></image>
+                <view class="words">宝妈理财师推荐产品组合</view>
+            </view>
+            <view class="body">
+                <view bindtap="goToRouter" data-url="/pages/plain/plainInfo?id={{itemName.id}}&annual={{itemName.insurancePremium}}&comp={{itemName.insuranceComp}}&payType={{itemName.payType}}&desc={{itemName.programmeDesc}}&subTitle={{itemName.programmeDesc}}&title={{itemName.programmeName}}&amont={{itemName.insuranceAmont}}&pos={{idx+1}}" class="product" wx:for="{{item.programmeVoList}}" wx:for-index="idx" wx:key="*" wx:for-item="itemName">
+                    <view class="num1">
+                        <image src="../../img/num{{idx + 1}}.png"></image>
+                        <view class="desc" style="margin-left: 30rpx;">
+                            <view>{{itemName.programmeName}}</view>
+                            <view>{{itemName.programmeDesc}}</view>
+                        </view>
+                    </view>
+                    <view class="arrow">
+                        <image src="../../img/right-arrow.png"></image>
+                    </view>
+                </view>
+
+            </view>
+        </view>
+    </view>
+
+    <view class="btn-section">
+        <view class="reload" bindtap="goMainBack" >
+            <image src="../../img/reload.png"></image>
+            <view>重测</view>
+        </view>
+        <view class="QQ" bindtap="showQQGroup">
+            <image src="../../img/group.png"></image>
+            <view>入群咨询</view>
+        </view>
+        <view class="btn" bindtap="goToRouter" data-url="/pages/plain/createServer">
+            付费咨询(1对1)
+        </view>
+    </view>
+</view>
+</template>
+<style lang="scss">
+.wall-bg{
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(0,0,0,0.6);
+    z-index: 100;
+}
+.scan{
+    position:fixed;
+    z-index:101;
+    top:50%;
+    margin-top:-450rpx;
+    left:50%;
+    margin-left:-329rpx;
+    .scan-box{
+        padding: 30rpx;
+        background-color:white;
+        text-align:center;
+
+        image{
+            width: 600rpx;
+            height: 600rpx;
+        }
+    }
+}
+.page {
+    width: 100%;
+    height: auto;
+    display: block;
+    background-color: rgb(242,242,242);
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.first-section{
+    background-color: white;
+    position: relative;
+    top: 20rpx;
+    padding: 20rpx;
+    .header{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 20rpx;
+        border-bottom: 1px solid rgb(164,164,164);
+        .title{
+            display: flex;
+            font-size: 14px;
+            font-weight: bold;
+            image{
+                width: 30rpx;
+                height: 30rpx;
+            }
+            .words{
+                margin-left: 20rpx;
+            }
+        }
+        .other-title{
+            font-size: 12px;
+            color: rgb(164,164,164);
+        }
+    }
+
+    .subtitle{
+        padding-top: 20rpx;
+        .title{
+            display: flex;
+            image{
+                width: 50rpx;
+                height: 50rpx;
+            }
+            .words{
+                margin-left: 20rpx;
+                font-size: 14px;
+            }
+        }
+        .table{
+            margin-top: 20rpx;
+            .th{
+                display: flex;
+                justify-content: center;
+                .td{
+                    background-color: rgb(241,150,1);
+                    font-size: 14px;
+                    padding: 10rpx 20rpx;
+                    margin-left: 8rpx;
+                    width: 160rpx;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }
+            }
+            .tr{
+                display: flex;
+                justify-content: center;
+                .td{
+                    width: 160rpx;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    background-color: rgb(251,232,202);
+                    font-size: 14px;
+                    padding: 15rpx 20rpx;
+                    margin-left: 8rpx;
+                }
+            }
+        }
+    }
+
+    .body{
+        .icon{
+            margin-top: 20rpx;
+            width: 100%;
+            text-align: center;
+            image{
+                width: 50rpx;
+                height: 30rpx;
+            }
+        }
+        .title{
+            font-size: 14px;
+            text-align: center;
+        }
+        .icon-line{
+            text-align: center;
+            image{
+                width:551rpx;
+                height:12rpx;
+
+            }
+        }
+        .content{
+            margin-top: 40rpx;
+            font-size: 14px;
+            color: #606266;
+            line-height: 1.8888;
+        }
+    }
+}
+
+.second-section{
+    margin-top: 40rpx;
+    background-color: white;
+    padding: 20rpx;
+    margin-bottom: 20rpx;
+    .title{
+        display: flex;
+        align-items: center;
+        image{
+            width: 50rpx;
+            height: 50rpx;
+        }
+        .words{
+            margin-left: 20rpx;
+            font-size: 14px;
+        }
+    }
+    .body{
+        margin-top: 20rpx;
+        .product{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20rpx 0 20rpx 0;
+            border-bottom: 1px solid rgb(186,186,186);
+            .num1{
+                display: flex;
+                align-items: center;
+                image{
+                    width: 50rpx;
+                    height: 50rpx;
+                }
+            }
+            .arrow{
+                image{
+                    width: 30rpx;
+                    height: 50rpx;
+                }
+            }
+            .desc{
+                font-size: 14px;
+            }
+        }
+    }
+}
+
+.btn-section{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background-color:white;
+    padding-left:70rpx;
+    .reload{
+        font-size: 14px;
+        color: rgb(241,150,1);
+        text-align: center;
+        image{
+            width: 50rpx;
+            height: 40rpx;
+        }
+    }
+    .QQ{
+        font-size: 14px;
+        text-align: center;
+        image{
+            width: 50rpx;
+            height: 40rpx;
+        }
+    }
+    .btn{
+        padding: 40rpx;
+        background-color: rgb(241,150,1);
+        color: white;
+        font-size: 16px;
+        width: 40%;
+        text-align: center;
+    }
+}
+
+</style>

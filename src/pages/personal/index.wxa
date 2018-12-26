@@ -1,0 +1,276 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+
+@Page
+class Index {
+    constructor(){
+        this.data = {
+            status:0,
+            showModal:false
+        }
+    }
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+    onLoad(){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+        //判断是否有权限
+        // this.openSetting();
+
+    }
+
+    onShow(){
+        this.getMyInfo();
+    }
+
+
+    getMyInfo(){
+        let id = wx.getStorageSync('userId');
+        let token = wx.getStorageSync('token');
+        tool.httpMethods({id:id , token} , this.app.globalData.httpUrl + '/api/customerApiController/getCustomerInfo' , '' , 'post')
+            .then((res) => {
+                this.setData({
+                    status:res.resultData.status
+                })
+            })
+    }
+
+    onShareAppMessage(){
+        let id = wx.getStorageSync('userId');
+        return {
+            title: '专属0-6岁宝妈的理财平台，让你省心省力理好财',
+            // path: '/pages/personal/info?my=' + id,
+            path:'/pages/index?my=' + id,
+            imageUrl:'../../img/share-bg.png'
+        }
+    }
+
+    openSetting() {
+        // 查看是否授权
+        // 查看是否授权
+        wx.getSetting({
+            success :(res) => {
+                if (res.authSetting['scope.userInfo']) {
+                    // 已经授权，可以直接调用 getUserInfo 获取头像昵称
+                    wx.getUserInfo({
+                        success: function(res) {
+
+                        }
+                    })
+                }else{
+                    this.setData({
+                        showModal:true
+                    })
+                }
+            }
+        })
+    }
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "首页",
+    "usingComponents": {
+        "modal": "../component/modal"
+    }
+}
+</config>
+<template>
+<view class="page">
+    <modal show="{{showModal}}" height='60%' bindcancel="modalCancel" bindconfirm='modalConfirm'>
+        <view class='modal-content'>
+            <view class="title">提示</view>
+            <view class="body">
+                是否让小程序获取您的信息
+            </view>
+        </view>
+    </modal>
+   <view class="person-info">
+       <view class="ava-info">
+           <open-data class="img" type="userAvatarUrl"></open-data>
+           <view style="text-align: center;">
+               <open-data class="ava-font" type="userNickName"></open-data>
+               <view class="ava-font ava-status" wx:if="{{status == 1}}">未完善</view>
+               <view class="ava-font ava-status" style="border:1px solid #67C23A;color: #67C23A;" wx:if="{{status != 1}}">已完善</view>
+           </view>
+       </view>
+       <view class="to-finish-btn" bindtap="goToRouter" data-url="/pages/personal/info">
+           <view class="words">
+               去完善
+           </view>
+           <image src="../../img/right-arrow.png"></image>
+       </view>
+   </view>
+   <view class="my-basic-btn">
+       <view class="common" bindtap="goToRouter" data-url="/pages/order/index">
+           <view class="common-left">
+               <image src="../../img/my/order.png"></image>
+               <text>我的订单</text>
+           </view>
+           <image src="../../img/right-arrow.png" class="right-arrow"></image>
+       </view>
+
+       <view class="common" bindtap="goToRouter" data-url="/pages/family/index">
+           <view class="common-left">
+               <image src="../../img/my/home.png"></image>
+               <text>我的家庭</text>
+           </view>
+           <image src="../../img/right-arrow.png" class="right-arrow"></image>
+       </view>
+
+       <view class="common" bindtap="goToRouter" data-url="/pages/course/index"  style="border-bottom: none;">
+           <view class="common-left">
+               <image src="../../img/my/class.png"></image>
+               <text>我的公开课</text>
+           </view>
+           <image src="../../img/right-arrow.png" class="right-arrow" bindtap="goToRouter" data-url="/pages/course/index"></image>
+       </view>
+
+       <button style="margin-top: 20rpx;" class="common customer-btn" open-type="share">
+           <view class="common-left">
+               <image src="../../img/my/friends.png"></image>
+               <text>推荐好友</text>
+           </view>
+           <image src="../../img/right-arrow.png" class="right-arrow"></image>
+       </button>
+
+       <button class="common customer-btn" open-type="contact" bindcontact="handleContact">
+           <view class="common-left">
+               <image src="../../img/my/service.png"></image>
+               <text>联系客服</text>
+           </view>
+           <image src="../../img/right-arrow.png" class="right-arrow"></image>
+       </button>
+
+       <view class="common" style="border-bottom: none;" bindtap="goToRouter" data-url="/pages/about/index">
+           <view class="common-left">
+               <image src="../../img/my/about.png"></image>
+               <text>关于我们</text>
+           </view>
+           <image src="../../img/right-arrow.png" class="right-arrow"></image>
+       </view>
+
+       <!--<button bindtap="openSetting">打开设置页</button>-->
+   </view>
+</view>
+</template>
+<style lang="scss">
+    .modal-content{
+        width: 100%;
+        .title{
+            text-align: center;
+            font-size: 18px;
+            margin-top: 20rpx;
+        }
+        .body{
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 20rpx;
+        }
+    }
+    button::after{ border: none; }
+.page {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background-color: rgb(242,242,242);
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.my-basic-btn{
+    margin-top: 23rpx;
+    .my-friend{
+        margin: 10rpx 0 10rpx 0;
+    }
+    &:last-child{
+        color: rgb(112,112,112);
+        font-size: 17px;
+    }
+    .customer-btn{
+        color:#707070;
+        font-size: 12px;
+        align-items: center;
+        border: 0;
+        border-radius: 0;
+    }
+    .common{
+        align-items: center;
+        background-color: white;
+        padding: 20rpx 20rpx;
+        border-bottom: 1px solid rgb(204,204,204);
+        display: flex;
+        justify-content: space-between;
+        .right-arrow{
+            width:15rpx;
+            height:25rpx
+        }
+        .common-left{
+            display: flex;
+            align-items: center;
+        }
+        image{
+            width: 50rpx;
+            height: 50rpx;
+        }
+        text{
+            font-size: 12px;
+            margin-left: 20rpx;
+        }
+    }
+}
+.person-info{
+    padding: 50rpx 20rpx;
+    display: flex;
+    justify-content: space-between;
+    background-color: white;
+    .ava-info{
+        align-items: center;
+        display: flex;
+        .ava-font{
+            font-size: 14px;
+            text-align: center;
+        }
+        .ava-status{
+            border:1px solid #e0650e;
+            border-radius:17px;
+            padding:9rpx 0;
+            width: 130rpx;
+            text-align: center;
+            font-size:12px;
+            color: #e0650e;
+        }
+    }
+    .ava-info .img{
+        width: 150rpx;
+        height: 150rpx;
+        margin-right: 20rpx;
+    }
+    .ava-info view{
+        display: block;
+    }
+    .to-finish-btn{
+        font-size: 14px;
+        color: lightgrey;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        .words{
+            font-size: 14px;
+            margin-right: 20rpx;
+        }
+        image{
+            width:20rpx;
+            height:25rpx
+        }
+    }
+}
+</style>

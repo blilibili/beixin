@@ -1,0 +1,270 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class Index {
+    constructor(){
+        this.data = {
+            annual: "",
+            comp: "",
+            desc: "",
+            payType: "",
+            title:'',
+            subTitle:'',
+            amont:'',
+            insuranceList:[],
+            pos:1
+        }
+    }
+    onLoad(options){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+        wx.setNavigationBarTitle({
+            title:'定制保障方案'
+        })
+        Object.keys(this.data).forEach((v , k) => {
+            if(v != '__webviewId__'){
+                this.setData({
+                    [v]:options[v] || []
+                })
+            }
+        })
+
+        let changeAmount = Math.round(parseInt(this.data.amont) / 10000);
+        this.setData({
+            amont:changeAmount
+        })
+        this.getPgInfoDetail(options.id)
+    }
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+
+    getPgInfoDetail(id){
+        tool.httpMethods({token:wx.getStorageSync('token') , programmeId:id} , this.app.globalData.httpUrl + '/api/pgInfo/findDetail' , '' , 'post')
+            .then((res) => {
+                res.resultData.forEach((v , k) => {
+                    if(v.securityType == '0001'){
+                        v.securityText = '意外保险金'
+                    }else if(v.securityType == '0002'){
+                        v.securityText = '医疗保险金'
+                    }else if(v.securityType == '0003'){
+                        v.securityText = '重疾保险金'
+                    }else if(v.securityType == '0004'){
+                        v.securityText = '身故保险金'
+                    }
+                })
+                
+                this.setData({
+                    insuranceList:res.resultData
+                })
+            })
+    }
+
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "首页"
+}
+</config>
+<template>
+<view class="page">
+    <view class="card">
+        <view class="header">
+            <view class="title">
+                <image src="../../img/small_people.png"></image>
+                <view class="words">子女1</view>
+            </view>
+            <view class="other-title">
+                子女年交保费：约¥{{annual}}元
+            </view>
+        </view>
+        <view class="body">
+            <view class="product" >
+                <view class="num1">
+                    <image src="../../img/num{{pos}}.png"></image>
+                </view>
+                <view class="desc">
+                    <view class="title">{{title}}</view>
+                    <view class="subTitle">{{subTitle}}</view>
+                </view>
+            </view>
+
+        </view>
+
+        <view class="table">
+            <view class="th">
+                <view class="td" style="background-color:#f19601;">保险公司</view>
+                <view class="td" style="background-color:#fbe8ca;">{{comp}}</view>
+                <view class="td" style="background-color:#f19601;">交费方式</view>
+                <view class="td" style="background-color:#fbe8ca;">{{payType}}</view>
+            </view>
+
+            <view class="tr">
+                <view class="td" style="background-color:#f19601;margin-top: 6rpx;">保额</view>
+                <view class="td" style="background-color:#fbe8ca;margin-top: 6rpx;">{{amont}}万元</view>
+                <view class="td" style="background-color:#f19601;margin-top: 6rpx;">保费</view>
+                <view class="td" style="background-color:#fbe8ca;margin-top: 6rpx;">{{annual}}元</view>
+            </view>
+            <view class="big-content">
+                <view class="tr" style="background-color:#f19601;">{{title}}保障明细</view>
+                <view class="td" style="display: block;background-color:#fbe8ca;padding: 0;">
+                    <!--<view style="padding: 10rpx 20rpx;border-bottom: 3px solid white;">{{desc}}</view>-->
+                    <view class="common-td" style="padding: 10rpx 20rpx;" wx:for="{{insuranceList}}" wx:key="*">{{item.securityDetail}}</view>
+                </view>
+            </view>
+        </view>
+    </view>
+
+    <view class="pay-btn" data-url="/pages/plain/advisor" bindtap="goToRouter" style="display: none;" >咨询宝妈理财师,获取更精准的方案</view>
+</view>
+</template>
+<style lang="scss">
+    .pay-btn{
+        margin: 80rpx auto;
+        width: 600rpx;
+        background-color: rgb(241,150,1);
+        color: white;
+        padding: 20rpx;
+        border-radius: 24px;
+        text-align: center;
+        font-size: 14px;
+    }
+.big-content{
+    display: flex;
+    margin-left:8rpx;
+    margin-top:6rpx;
+    .tr{
+        font-size: 12px;
+        /*background-color: rgb(241,150,1);*/
+        display: flex;
+        align-items: center;
+        padding: 0 20rpx;
+        width: 175rpx;
+        text-align: center;
+        line-height: 1.8888;
+    }
+    .td{
+        /*background-color: rgb(251,232,202);*/
+        font-size: 12px;
+        padding: 10rpx 20rpx;
+        margin-left: 8rpx;
+        width: 100%;
+        line-height: 1.8888;
+        display:flex;
+        align-items:center;
+    }
+}
+    .common-td:nth-child(1) , .common-td:nth-child(2){
+        border-bottom:3px solid white;
+    }
+.page {
+    width: 100%;
+    height: 100vh;
+    display: block;
+    background-color: rgb(242,242,242);
+    padding-bottom: 40rpx;
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.card{
+    padding: 20rpx;
+    background-color: white;
+    position: relative;
+    top: 20rpx;
+    .body{
+        margin-top: 20rpx;
+        .product{
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 20rpx 0 20rpx 0;
+            .num1{
+                image{
+                    width: 50rpx;
+                    height: 50rpx;
+                }
+            }
+            .arrow{
+                image{
+                    width: 30rpx;
+                    height: 50rpx;
+                }
+            }
+            .desc{
+                font-size: 14px;
+                margin-left: 40rpx;
+
+                .subTitle{
+                    font-size: 15px;
+                    color: rgb(204,204,204);
+                }
+            }
+        }
+    }
+}
+.table{
+    margin-top: 20rpx;
+
+    .th{
+        display: flex;
+        justify-content: center;
+        .td{
+            background-color: rgb(241,150,1);
+            font-size: 12px;
+            padding: 10rpx 20rpx;
+            margin-left: 8rpx;
+            width: 160rpx;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    }
+    .tr{
+        display: flex;
+        justify-content: center;
+        .td{
+            width: 160rpx;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgb(251,232,202);
+            font-size: 12px;
+            padding: 15rpx 20rpx;
+            margin-left: 8rpx;
+        }
+    }
+}
+.header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 20rpx;
+    border-bottom: 1px solid rgb(186,186,186);
+    .title{
+        display: flex;
+        font-size: 14px;
+        font-weight: bold;
+        image{
+            width: 30rpx;
+            height: 30rpx;
+        }
+        .words{
+            margin-left: 20rpx;
+        }
+    }
+    .other-title{
+        font-size: 12px;
+        color: rgb(164,164,164);
+    }
+
+
+}
+</style>

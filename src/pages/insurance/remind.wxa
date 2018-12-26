@@ -1,0 +1,213 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class Index {
+    constructor(){
+        this.data = {
+            demo1_days_style:[],
+            year:2018,
+            month:10,
+            days:0,
+            queryCondition:{
+                page:1,
+                pageSize:10,
+                token:wx.getStorageSync('token'),
+                queryDate:''
+            },
+            orderList:[]
+        }
+    }
+    onLoad(options) {
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+
+        wx.setNavigationBarTitle({
+            title:'保单提醒'
+        })
+        const days_count = new Date(this.data.year, this.data.month, 0).getTime();
+        let tmp = this.utils.formatDate(days_count , 'yyyy-MM-dd').split('-');
+        let obj = {
+            background: '#F19601',
+            month:'current',
+            day: new Date().getDate(),
+            color:'white'
+        }
+        let temp = [];
+        temp.push(obj);
+        this.setData({
+            demo1_days_style:temp
+        })
+
+        this.getCheckedDateOrderList(this.utils.formatDate(new Date().getTime() , 'yyyy-MM-dd'))
+    }
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+    getCheckedDateOrderList(date){
+        this.setData({
+            ['queryCondition.queryDate']:date
+        })
+        tool.httpMethods(this.data.queryCondition , this.app.globalData.httpUrl + '/api/insurancePolicy/findList' , '' , 'post')
+                .then((res) => {
+                    res.resultData.forEach((v , k) => {
+                        if(v.type == null){
+                            v.inuranceTypeName = '其他'
+                        }else{
+                            v.inuranceTypeName = tool.insuranceType[v.type]
+                        }
+                    })
+                    this.setData({
+                        orderList:res.resultData
+                    })
+                })
+    }
+    changeDate(e){
+        let currentDay = e.detail.day;
+        let obj = {
+            background: '#F19601',
+            month:'current',
+            day: currentDay,
+            color:'white'
+        }
+        let temp = [];
+        temp.push(obj);
+        this.setData({
+            demo1_days_style:temp
+        })
+
+        if(currentDay < 10){
+            currentDay = '0' + currentDay
+        }
+        let timeStamp = e.detail.year + '-' + e.detail.month + '-' + currentDay
+        this.getCheckedDateOrderList(timeStamp)
+    }
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "首页",
+    "usingComponents": {
+        "calendar": "plugin://calendar/calendar"
+    }
+}
+</config>
+<template>
+<view class="page">
+    <calendar class="calendar" days-color="{{demo1_days_style}}" binddayClick="changeDate" />
+
+    <view class="order-list">
+        <view class="order" bindtap="goToRouter" data-url="/pages/insurance/info?id={{item.id}}" wx:for="{{orderList}}" wx:key="*">
+            <view class="title">
+                <view class="desc">
+                    <view class="label">{{item.inuranceTypeName}}</view>
+                    <view class="words">{{item.insuranceName}}</view>
+                </view>
+                <view class="bg">
+                    <image wx:if="{{item.status == 1}}" src="../../img/insurancing.png" ></image>
+
+                    <image wx:if="{{item.status == 2}}" src="../../img/outdate.png" ></image>
+
+                    <image wx:if="{{item.status == 3}}" src="../../img/outdating.png" ></image>
+                    <!--<image src="../../img/insurance/order-bg.png"></image>-->
+                </view>
+            </view>
+            <view class="info">
+                <view class="common">
+                    <view class="label">被保人:</view>
+                    <view class="label words">{{item.insuredName}}</view>
+                </view>
+                <view class="common">
+                    <view class="label">保费:</view>
+                    <view class="label words">{{item.insuredAmount}}元</view>
+                </view>
+                <view class="common">
+                    <view class="label">被保时间:</view>
+                    <view class="label words">{{item.beginDate}}至{{item.endDate}}</view>
+                </view>
+            </view>
+        </view>
+
+    </view>
+</view>
+</template>
+<style lang="scss">
+.info{
+    padding: 20rpx 0;
+    .common{
+        display: flex;
+        justify-content: space-between;
+        .label{
+            font-size: 12px;
+            color: rgb(164 , 164 , 164);
+            width: 300rpx;
+        }
+        .words{
+            text-align: right;
+        }
+    }
+}
+.order-list{
+    padding: 30rpx;
+    background-color: white;
+    margin-top: 20rpx;
+    .order{
+
+        margin-top: 20rpx;
+        .title{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            .bg{
+
+                image{
+                    width: 150rpx;
+                    height: 80rpx;
+                }
+            }
+            .desc{
+                align-items: center;
+                display: flex;
+                justify-content: flex-start;
+                .label{
+                    color: #F19601;
+                    padding: 10rpx 0;
+                    width: 120rpx;
+                    text-align: center;
+                    font-size: 14px;
+                    border:1px solid #F19601;
+                }
+                .words{
+                    font-size: 14px;
+                    margin-left: 20rpx;
+                }
+            }
+        }
+    }
+}
+.calendar--calendar{
+    padding-top: 20rpx;
+    background-color: white;
+    padding-bottom: 30rpx;
+}
+.calendar--calendar-header{
+}
+.calendar--calendar-row{
+    border-bottom:1px solid rgb(164,164,164)
+}
+.page {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background-color: rgb(242,242,242);
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+
+</style>

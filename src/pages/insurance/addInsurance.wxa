@@ -1,0 +1,552 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class Index {
+    constructor(){
+        this.data = {
+            tmpImg:[],
+            insuranceType:[
+                {
+                    value:'0001',
+                    name:'人寿险'
+                },
+                {
+                    value:'0002',
+                    name:'重疾险'
+                },
+                {
+                    value:'0003',
+                    name:'意外险'
+                },
+                {
+                    value:'0004',
+                    name:'医疗险'
+                },
+                {
+                    value:'0005',
+                    name:'防癌险'
+                },
+                {
+                    value:'0006',
+                    name:'其他'
+                }
+            ],
+            insuranceDeadLine:[
+                {
+                    name:'一年',
+                    value:'0001'
+                },
+                {
+                    name:'三年',
+                    value:'0002'
+                },
+                {
+                    name:'五年',
+                    value:'0003'
+                },
+                {
+                    name:'十年',
+                    value:'0004'
+                },
+                {
+                    name:'二十年',
+                    value:'0005'
+                },
+                {
+                    name:'三十年',
+                    value:'0006'
+                },
+                {
+                    name:'保障至70岁',
+                    value:'0007'
+                },
+                {
+                    name:'保障至75岁',
+                    value:'0008'
+                },
+                {
+                    name:'保障至80岁',
+                    value:'0009'
+                },
+                {
+                    name:'终身',
+                    value:'0010'
+                },
+                {
+                    name:'其他',
+                    value:'9999'
+                }
+            ],
+            insuranceName:'',
+            submitForm:{
+                insuranceName:'',
+                policyNo:'',
+                insuredName:'',
+                birthdate:'',
+                beginDate:'',
+                deadlineCode:'',
+                endDate:'',
+                premium:'',
+                insuredAmount:'',
+                payBank:'',
+                bankCardNo:'',
+                type:'',
+                remark:'',
+                paymentPeriod:''
+            },
+            //交费年限
+            paymentPeriodArr:[],
+            insuranceDeadLineName:'',
+            uploadImg:'../../img/upload.png',
+            uploadImgArr:[]
+        }
+    }
+    onLoad(){
+        this.setPaymentPeriodYears();
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+    }
+
+    setPaymentPeriodYears(){
+        let tmp = [];
+        for(let i = 1;i<101;i++){
+            tmp.push(i)
+        }
+        this.setData({
+            paymentPeriodArr:tmp
+        })
+    }
+
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+    //arr上传文件数组
+    uploadFiles(files){
+        return new Promise((reslove , reject) => {
+            wx.uploadFile({
+                url: this.app.globalData.httpUrl + '/api/fileUpload/uploadMulti', //仅为示例，非真实的接口地址
+                filePath: files,
+                name: 'files',
+                formData:{
+                    type:0
+                },
+                success :(result) => {
+                    let tmp = JSON.parse(result.data);
+                    tmp.resultData.forEach((v , k) => {
+                        tmp.resultData[k] = this.app.globalData.httpUrl + v;
+                    })
+                    reslove(tmp.resultData[0]);
+                }
+            })
+        })
+    }
+    uploadImage(){
+        wx.chooseImage({
+            count: 1,
+            sizeType: ['original', 'compressed'],
+            sourceType: ['album', 'camera'],
+            success : (res) => {
+                let tmp = [];
+                let tempFilePaths = res.tempFilePaths;
+                this.uploadFiles(tempFilePaths[0]).then((result) => {
+                    tmp.push(result);
+                    this.setData({
+                        uploadImgArr:tmp
+                    })
+                })
+
+            }
+        })
+    }
+
+    uploadMoreImage(){
+        wx.chooseImage({
+            count: 1,
+            sizeType: ['original', 'compressed'],
+            sourceType: ['album', 'camera'],
+            success : (res) => {
+                if(this.data.uploadImgArr.length != 6){
+                    let tmp = this.data.uploadImgArr;
+                    let tempFilePaths = res.tempFilePaths;
+                    this.uploadFiles(tempFilePaths[0]).then((result) => {
+                        tmp.push(result)
+                        this.setData({
+                            uploadImgArr:tmp
+                        })
+                    })
+                }else{
+                    wx.showToast({
+                        title:'最多只能上传六张'
+                    })
+                }
+            }
+        })
+    }
+
+    submitInsuranceOrder(){
+        //判断是否有字段为空
+       for(let n in this.data.submitForm){
+           if(n != 'remark' && n != 'endDate'){
+               if(this.data.submitForm[n] == ''){
+                   wx.showToast({
+                       title:'请填写信息',
+                       icon:'none'
+                   })
+                   return false;
+               }
+           }
+       }
+
+        let temp = [];
+        let tmp = this.data.submitForm;
+        tmp.openId = wx.getStorageSync('openId');
+        tmp.token = wx.getStorageSync('token');
+        tmp.customerId = wx.getStorageSync('userId');
+
+
+        this.data.uploadImgArr.forEach((v , k) => {
+            temp[k] = {
+                imgUrl:v
+            }
+        })
+
+        let insurancePolicyInfo = {
+            insurancePolicyInfo:JSON.stringify(tmp),
+            token:tmp.token,
+            insuredImgList:JSON.stringify(temp)
+        };
+
+        //this.app.globalData.httpUrl + '/api/insurancePolicy/save'
+        tool.httpMethods(insurancePolicyInfo , this.app.globalData.httpUrl + '/api/insurancePolicy/save' , '' , 'post')
+                .then((res) => {
+                    if(res.resultCode == '10000'){
+                        wx.showToast({
+                            title:'新增成功',
+                            success:(res) => {
+                                ///pages/insurance/remind
+                                    setTimeout(() => {
+                                        wx.switchTab({
+                                            url:'/pages/insurance/index'
+                                        })
+                                    } , 1000)
+                                }
+                        })
+                    }
+                })
+    }
+
+    setInputValue(e){
+        let fieldName = e.currentTarget.dataset.name;
+        this.setData({
+            ['submitForm.' + fieldName]:e.detail.value
+        })
+    }
+
+    bindDateChange(e){
+        let checkedTime = e.detail.value;
+        this.setData({
+            ['submitForm.birthdate']:checkedTime
+        })
+    }
+
+    bindBeginChange(e){
+        let checkedTime = e.detail.value;
+        this.setData({
+            ['submitForm.beginDate']:checkedTime
+        })
+    }
+
+    bindDeadlineCode(e){
+        let checkedTime = e.detail.value;
+        this.setData({
+            ['submitForm.endDate']:checkedTime
+        })
+    }
+
+    changeInsuranceType(e){
+        let checkedIndex = e.detail.value;
+        this.setData({
+            insuranceName:this.data.insuranceType[checkedIndex].name,
+            ['submitForm.type']:this.data.insuranceType[checkedIndex].value
+        })
+    }
+
+    changeInsuranceDeadLine(e){
+        let checkedIndex = e.detail.value;
+        this.setData({
+            insuranceDeadLineName:this.data.insuranceDeadLine[checkedIndex].name,
+            ['submitForm.deadlineCode']:this.data.insuranceDeadLine[checkedIndex].value
+        })
+    }
+
+    changePaymentPeriod(e){
+        let checkedValue = parseInt(e.detail.value) + 1;
+        this.setData({
+            ['submitForm.paymentPeriod']:checkedValue
+        })
+    }
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "首页"
+}
+</config>
+<template>
+<view class="page">
+   <view class="upload-section">
+       <view class="img-insurance" bindtap="uploadImage">
+           <image src="{{uploadImg}}" wx:if="{{uploadImgArr.length == 0}}"></image>
+           <image src="{{item}}" wx:for="{{uploadImgArr}}" wx:key="*" wx:if="{{uploadImgArr.length != 0}}"></image>
+       </view>
+       <view class="add-insurance-btn" bindtap="uploadMoreImage">
+            <view style="margin-right: 20rpx;">
+                <image style="width: 50rpx;height: 50rpx;" src="../../img/insurance/camera.png" wx:if="{{tmpImg.length == 0}}"></image>
+            </view>
+           <view>继续添加保单图片</view>
+       </view>
+   </view>
+    <view style="padding: 30rpx 20rpx;font-size: 16px;">请填写保单信息</view>
+    <view class="form">
+        <view class="form-item">
+            <view class="label" >保险名称</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <input bindblur="setInputValue" value="{{submitForm.insuranceName}}" data-name="insuranceName" placeholder="请输入" />
+                </view>
+            </view>
+        </view>
+        <view class="form-item">
+            <view class="label">保单号</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <input bindblur="setInputValue" value="{{submitForm.policyNo}}" data-name="policyNo" placeholder="请输入"  />
+                </view>
+            </view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">保单类型</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <picker mode="selector" range-key="name" value="{{0}}" range="{{insuranceType}}" bindchange="changeInsuranceType">
+                        <view class="picker">
+                            {{insuranceName || '请选择保险类型'}}
+                        </view>
+                    </picker>
+                </view>
+            </view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">被保人</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <input bindblur="setInputValue" value="{{submitForm.insuredName}}" data-name="insuredName" placeholder="请输入" />
+                </view>
+            </view>
+        </view>
+        <view class="form-item">
+            <view class="label">出生日期</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <picker mode="date" value="{{submitForm.birthdate}}" bindchange="bindDateChange">
+                        <view class="picker">
+                            {{submitForm.birthdate || '请选择时间'}}
+                        </view>
+                    </picker>
+                </view>
+            </view>
+        </view>
+        <view class="form-item">
+            <view class="label">保障开始时间</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <picker mode="date" value="{{submitForm.beginDate}}" bindchange="bindBeginChange">
+                        <view class="picker">
+                            {{submitForm.beginDate || '请选择时间'}}
+                        </view>
+                    </picker>
+                </view>
+            </view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">交费年限</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <picker mode="selector" value="{{0}}" range="{{paymentPeriodArr}}" bindchange="changePaymentPeriod">
+                        <view class="picker">
+                            {{submitForm.paymentPeriod || '请选择交费年限'}}
+                        </view>
+                    </picker>
+                </view>
+            </view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">保障期限</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <picker mode="selector" range-key="name" value="{{0}}" range="{{insuranceDeadLine}}" bindchange="changeInsuranceDeadLine">
+                        <view class="picker">
+                            {{insuranceDeadLineName || '请选择保障期限'}}
+                        </view>
+                    </picker>
+                    <!--<picker mode="date" value="{{submitForm.endDate}}" bindchange="bindDeadlineCode">-->
+                        <!--<view class="picker">-->
+                            <!--{{submitForm.endDate || '请选择时间'}}-->
+                        <!--</view>-->
+                    <!--</picker>-->
+                </view>
+            </view>
+        </view>
+        <view class="form-item" wx:if="{{submitForm.deadlineCode == '9999'}}">
+            <view class="label">保障期限</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <picker mode="date" value="{{submitForm.endDate}}" bindchange="bindDeadlineCode">
+                        <view class="picker">
+                        {{submitForm.endDate || '请选择时间'}}
+                        </view>
+                    </picker>
+                </view>
+            </view>
+        </view>
+        <view class="form-item" wx:if="{{submitForm.deadlineCode == '9999'}}">
+            <view class="label">备注</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <input bindblur="setInputValue" value="{{submitForm.remark}}" data-name="remark" placeholder="请输入" />
+                </view>
+            </view>
+        </view>
+        <view class="form-item">
+            <view class="label">保费(元)</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <input bindblur="setInputValue" value="{{submitForm.premium}}" data-name="premium" placeholder="请输入" />
+                </view>
+            </view>
+        </view>
+        <view class="form-item">
+            <view class="label">保额</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <input bindblur="setInputValue" value="{{submitForm.insuredAmount}}" data-name="insuredAmount" placeholder="请输入" />
+                </view>
+            </view>
+        </view>
+        <view class="form-item">
+            <view class="label">缴费银行</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <input bindblur="setInputValue" value="{{submitForm.payBank}}" data-name="payBank" placeholder="请输入" />
+                </view>
+            </view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">银行账号</view>
+            <view style="width: 400rpx;">
+                <view class="section">
+                    <input bindblur="setInputValue" value="{{submitForm.bankCardNo}}" data-name="bankCardNo" placeholder="请输入" />
+                </view>
+            </view>
+        </view>
+    </view>
+    <view class="pay-btn" bindtap="submitInsuranceOrder" >提交</view>
+</view>
+</template>
+<style lang="scss">
+    .picker{
+        position:relative;
+        left:-8rpx;
+    }
+    .pay-btn{
+        margin: 30rpx auto 80rpx auto;
+        width: 600rpx;
+        background-color: rgb(241,150,1);
+        color: white;
+        padding: 20rpx;
+        border-radius: 24px;
+        text-align: center;
+    }
+.form{
+    background-color: white;
+    padding: 20rpx 10rpx;
+    .form-item{
+        &:not(:last-child) {
+            border-bottom: 1px solid rgb(164,164,164);
+        }
+        padding: 20rpx 0;
+        font-size: 13px;
+        color: rgb(164,164,164);
+        display: flex;
+        align-items: center;
+        .label{
+            width: 50%;
+        }
+        .section{
+            font-size: 13px;
+            width: 400rpx;
+        }
+    }
+}
+.upload-section{
+    position: relative;
+    top: 20rpx;
+    background-color: white;
+    padding: 20rpx 0;
+    text-align: center;
+    .img-insurance{
+        image{
+            margin-left: 10rpx;
+            padding: 10rpx;
+            border: 1px solid rgb(204,204,204);
+            width: 150rpx;
+            height: 150rpx;
+        }
+    }
+    .add-insurance-btn{
+        margin: 30rpx auto;
+        width: 600rpx;
+        background-color: rgb(241,150,1);
+        color: white;
+        padding: 20rpx;
+        border-radius: 24px;
+        text-align: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 16px;
+    }
+    .uploadImg{
+        display: flex;
+    image{
+    &:not(first-child){
+         margin-left: 20rpx;
+     }
+    width: 50rpx;
+    height: 50rpx;
+    }
+
+    }
+}
+.page {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background-color: rgb(242,242,242);
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+
+</style>

@@ -1,0 +1,151 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class Index {
+    goBack(){
+        this.router.goBack();
+    }
+    constructor(){
+        this.data = {
+            queryData : {
+                page:1,
+                pageSize:10,
+                customerId:0
+            },
+            courseList:[]
+        }
+    }
+    onLoad(){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+
+        wx.setNavigationBarTitle({
+            title:'我的公开课'
+        });
+        this.getMyClass();
+    }
+
+    getMyClass(){
+        let id = wx.getStorageSync('userId');
+        let token = wx.getStorageSync('token');
+        this.setData({
+            ['queryData.customerId']:id
+        })
+        tool.httpMethods(this.data.queryData , this.app.globalData.httpUrl + '/api/orderApiController/getCourseOrder' , '' , 'post')
+            .then((res) => {
+                res.resultData.forEach((v ,k) => {
+                    v.imgUrl = this.app.globalData.httpUrl + v.imgUrl;
+                })
+                this.setData({
+                    courseList:res.resultData
+                })
+            })
+    }
+
+    //取消报名
+    cancelCourse(e){
+        let id = e.currentTarget.dataset.id;
+        tool.httpMethods({id:id} , this.app.globalData.httpUrl + '/api/orderApiController/delete' , '' , 'post')
+            .then((res) => {
+
+            })
+    }
+
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "我的公开课"
+}
+</config>
+<template>
+<view class="page">
+
+    <view class="course-content">
+        <view class="part-three-content" bindtap="goToRouter" data-url="/pages/course/pay?articleId={{item.typeId}}&isPay=true" wx:for="{{courseList}}" wx:key="*">
+            <view>
+                <image src="{{item.imgUrl}}" style="width: 150rpx;height: 150rpx;"></image>
+            </view>
+            <view style="width: 500rpx">
+                <view>
+                    <text class="second-part-strong">{{item.title}}</text>
+                </view>
+                <view>
+                    <text class="second-part-desc">{{item.classTime}}</text>
+                </view>
+                <view>
+                    <text class="second-part-strong">主讲: {{item.speaker}}</text>
+                    <!--<button style="width: 160rpx;font-size: 12px;float: right;background-color: rgb(242,160,98)" bindtap="cancelCourse" data-id="{{item.typeId}}" type="primary">取消报名</button>-->
+                </view>
+            </view>
+        </view>
+    </view>
+</view>
+</template>
+<style lang="scss">
+.page {
+    height: 100%;
+    display: block;
+    background-color: rgb(242,242,242);
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.course-content{
+    background-color:white;
+    margin:0rpx auto;
+    width:98%;
+    padding-top:20rpx;
+    position:relative;
+    top:20rpx;
+}
+.part-three-content{
+    display: flex;
+    justify-content: space-around;
+    padding: 20rpx 0;
+    border-bottom: 1px solid lightgrey;
+}
+.f-btn{
+    display: block;
+}
+.f-btn view {
+    text-align: center;
+}
+.second-part-strong{
+    font-weight: bold;
+    font-size: 14px;
+}
+.second-part-desc{
+    font-size: 12px;
+}
+.course-header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20rpx;
+    background-color: white;
+    .course-name{
+        font-size: 16px;
+    }
+    view{
+        image{
+            height: 50rpx;
+            width: 50rpx;
+            -webkit-transform: rotate(180deg);
+            -moz-transform: rotate(180deg);
+            -ms-transform: rotate(180deg);
+            -o-transform: rotate(180deg);
+            transform: rotate(180deg);
+        }
+    }
+}
+</style>

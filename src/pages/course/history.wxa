@@ -1,0 +1,118 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class CourseDetail {
+    onLoad(options){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+
+        wx.setNavigationBarTitle({
+            title:'往期回顾'
+        })
+
+        let articleId = options.id;
+        this.getHistoryDetail(articleId);
+    }
+    constructor(){
+        this.data = {
+            article:{},
+            imgUrl:''
+        }
+    }
+    goBack(){
+        this.router.goBack();
+    }
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+
+    getHistoryDetail(id){
+        tool.httpMethods({id:id} , this.app.globalData.httpUrl + '/api/articleApiController/get' , '' , 'get')
+            .then((res) => {
+                this.setData({
+                   article:res.resultData
+               })
+            })
+    }
+
+    onShareAppMessage(){
+        let id = wx.getStorageSync('userId');
+        let backImg = this.app.globalData.httpUrl + this.data.article.imgUrl;
+        return {
+            title: '来理财荟,让你慧理财',
+            // path: '/pages/course/detail?id=' + this.data.articleId,
+            path: '/pages/index?historyId=' + this.data.article.id,
+            // imageUrl:'https://www.beixinbm.com/beixin/imgInfo/insuranceConver/u1052.png'
+            imageUrl:backImg
+        }
+    }
+}
+
+wxa.launchPage(CourseDetail);
+</script>
+<config>
+{
+    "navigationTextTitle": "往期回顾",
+    "usingComponents": {
+        "wxparser": "plugin://wxparserPlugin/wxparser"
+    }
+}
+</config>
+<template>
+<view class="page">
+    <view class="history-container">
+        <view class="title">{{article.title}}</view>
+        <view class="small-title">{{article.summary}}</view>
+        <wxparser rich-text="{{article.content}}" class="content">
+
+        </wxparser>
+    </view>
+
+</view>
+</template>
+<style lang="scss">
+.page {
+    height: 100%;
+    display: block;
+    background-color: white;
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.history-container{
+    width: 95%;
+    margin: 0 auto;
+    .title{
+        width: 100%;
+        text-align: center;
+        font-size: 16px;
+        padding-top: 20rpx;
+        font-weight: 400;
+    }
+    .small-title{
+        color:#F19601;
+        font-size:12px;
+        text-align: center;
+        width: 100%;
+    }
+    .content{
+        /*position: relative;*/
+        /*top: 60rpx;*/
+        /*width: 100%;*/
+        text-align: justify;
+        /*text-indent:40px;*/
+        font-size:14px;
+        image{
+            text-align: center;
+        }
+    }
+
+.wxparser--wxParser-img{
+    width:100%;
+}
+}
+</style>

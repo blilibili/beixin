@@ -1,0 +1,330 @@
+
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+
+@Page
+class CoursePay {
+    constructor(){
+        this.data = {
+            isBanBtn:false,
+            articleObj:{},
+            isShowBtn:true,
+            currentCourseId:0,
+            nodes:[]
+        }
+    }
+    onLoad(options){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+
+        wx.setNavigationBarTitle({
+            title:'确认订单'
+        })
+        this.getArticleDetailById(options.articleId);
+        this.setData({
+            currentCourseId:options.articleId
+        })
+        if(options.isPay) {
+            this.setData({
+                isShowBtn: false
+            })
+        }
+    }
+    getArticleDetailById(id){
+        //获取理财会详情
+        tool.httpMethods({id:id , token:wx.getStorageSync('token')} , this.app.globalData.httpUrl + '/api/courseApiController/get' , '' , 'get')
+            .then((res) => {
+
+                res.resultData.imgUrl = this.app.globalData.httpUrl + res.resultData.imgUrl;
+                // let tmp = [
+                //     {
+                //         name:'p',
+                //         attrs:{
+                //             class:'div_class',
+                //             style:'width:80%;margin:20px auto;'
+                //         },
+                //         children:[
+                //             {
+                //                 type:'text',
+                //                 text:res.resultData.introduce
+                //             }
+                //         ]
+                //     }
+                // ];
+                // res.resultData.introduce = tmp;
+
+                //正则匹配所有img标签
+                const regex = new RegExp('<p', 'gi');
+                res.resultData.introduce = res.resultData.introduce.replace(regex, `<p style="width:80%;margin:20px auto;"`);
+                this.setData({
+                    articleObj:res.resultData
+                })
+            })
+    }
+    goBack(){
+        this.router.goBack();
+    }
+
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        let id = e.currentTarget.dataset.id
+        this.router.push(url + '?id=' + id);
+    }
+
+    payHandler(e){
+        this.setData({
+            isBanBtn:true
+        })
+        let formId = e.detail.formId;
+
+        let tmp = {
+            token:wx.getStorageSync('token'),
+            type:'1',
+            typeId:this.data.currentCourseId,
+            amount:this.data.articleObj.amount,
+            nickName:'',
+            avatar:''
+        };
+
+        tool.httpMethods(tmp , this.app.globalData.httpUrl + '/api/orderApiController/save' , '' , 'post')
+            .then((res) => {
+                if(res.resultCode == '10000'){
+                    let orderId = res.resultData.serialNumber;
+                    let time = tool.createTimeStamp().toString();
+                    let nstr = tool.createNonceStr();
+                    let temp = {
+                        token:wx.getStorageSync('token'),
+                        openid:wx.getStorageSync('openId'),
+                        body:this.data.articleObj.subTitle + ' ' + this.data.articleObj.title ,
+                        orderId:orderId,
+                        totalFee:this.data.articleObj.amount,
+                        attach:0,
+                        formId:formId
+                    }
+                    //发起微信支付 1516923291
+                    tool.httpMethods(temp , this.app.globalData.httpUrl + '/api/payApiController/tenpayAddOrderJSAPI' , '' , 'post')
+                        .then((result) => {
+                            let prepayId = result.resultData.prepayid;
+                            wx.requestPayment({
+                                timeStamp:time,
+                                nonceStr:nstr,
+                                package:'prepay_id='+ prepayId,
+                                signType:'MD5',
+                                paySign:tool.md5Key(nstr , prepayId , time),
+                                success:(res) => {
+                                    wx.showToast({
+                                        title:'支付成功',
+                                        success:()=>{
+                                            setTimeout(() => {
+                                                this.router.switch('/pages/index');
+                                            } , 1500);
+                                        }
+                                    })
+                                },
+                                fail:(res) => {
+                                    wx.showToast({
+                                        title:'取消支付',
+                                        success:()=>{
+                                            setTimeout(() => {
+                                                this.router.switch('/pages/index');
+                                            } , 1500);
+                                        }
+                                    })
+                                },
+                                complete(res){
+
+                                }
+                            })
+                        })
+                }else{
+                    wx.showToast({
+                        title:'服务器开小差了'
+                    });
+                }
+            })
+    }
+
+}
+
+wxa.launchPage(CoursePay);
+</script>
+<config>
+{
+    "navigationTextTitle": "支付",
+    "usingComponents": {
+        "wxparser": "plugin://wxparserPlugin/wxparser"
+    }
+}
+</config>
+<template>
+<view class="page">
+    <view class="pay-info">
+        <view class="ava">
+            <image src="{{articleObj.imgUrl}}"></image>
+            <view class="info">
+                <view style="font-size: 16px;">{{articleObj.title}}</view>
+                <view style="font-size: 13px;color: rgb(164,164,164);">{{articleObj.subTitle}}</view>
+            </view>
+        </view>
+        <view class="bill">
+            ¥{{articleObj.amount}}
+        </view>
+    </view>
+
+    <view class="order-box">
+        <view class="order">
+            <view class="info">订单合计</view>
+
+            <view class="bill">
+                ¥{{articleObj.amount}}
+            </view>
+        </view>
+        <!--<rich-text nodes="{{articleObj.introduce}}" class="order-desc">-->
+
+        <!--</rich-text>-->
+
+        <wxparser rich-text="{{articleObj.introduce}}" class="order-desc">
+
+        </wxparser>
+
+        <view class="pay-about-info">
+            <view class="common-font">
+                <view>
+                    <text class="normal-font">公开课时间: </text><text>{{articleObj.classTime}}</text>
+                </view>
+                <view>
+                    <text class="normal-font">公开课地点: </text><text>{{articleObj.address}}</text>
+                </view>
+                <view>
+                    <text class="normal-font">主讲: </text><text>{{articleObj.speaker}}</text>
+                </view>
+                <view>
+                    <text class="normal-font">联系电话: </text><text>{{articleObj.phone}}</text>
+                </view>
+            </view>
+        </view>
+    </view>
+
+    <form bindsubmit="payHandler" report-submit="{{true}}">
+        <view class="pay-btn" wx:if="{{isShowBtn}}">
+            <button disabled="{{isBanBtn}}" formType="submit">参加报名</button>
+        </view>
+    </form>
+
+
+</view>
+</template>
+<style lang="scss">
+.normal-font{
+    font-size: 14px;
+    font-weight: bold;
+}
+.common-font{
+    font-size: 14px;
+}
+.pay-about-info{
+    width: 80%;
+    margin: 0 auto;
+}
+.page {
+    width: 100%;
+    /*height: 100vh;*/
+    display: block;
+    background-color: rgb(242,242,242);
+    padding-bottom: 10rpx;
+}
+.pay-btn{
+    position: relative;
+    width: 100%;
+    margin: 40rpx auto;
+    text-align: center;
+    button{
+        width: 80%;
+        border-radius: 40px;
+        color: white;
+        background-color: rgb(241,150,1);;
+    }
+}
+.order-box{
+    width: 100%;
+    margin: 0rpx auto 20rpx auto;
+    padding-top: 40rpx;
+    padding-bottom: 40rpx;
+    background-color: white;
+    .order-desc{
+        color:rgb(241,150,1);
+        font-size: 16px;
+        padding: 20rpx 0;
+        width: 80%;
+        margin: 0 auto;
+    }
+}
+.pay-info{
+    margin:0rpx auto 20rpx auto;
+    padding-top:40rpx;
+    padding-bottom:40rpx;
+    display:flex;
+    justify-content:space-between;
+    background-color:white;
+    padding-left:50rpx;
+    padding-right:50rpx;
+    .ava{
+        display: flex;
+        margin-right: 25rpx;
+        .info{
+            margin-left: 20rpx;
+            font-size: 14px;
+            &:first-child{
+                font-size: 16px;
+            }
+        }
+    }
+    .ava image{
+        width: 80rpx;
+        height: 80rpx;
+        border-radius: 50px;
+    }
+    .bill{
+        font-size: 14px;
+        color: rgb(234 , 96 , 1);
+    }
+}
+.course-header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20rpx;
+    background-color: white;
+    .course-name{
+        font-size: 16px;
+    }
+    view{
+        image{
+            height: 50rpx;
+            width: 50rpx;
+            -webkit-transform: rotate(180deg);
+            -moz-transform: rotate(180deg);
+            -ms-transform: rotate(180deg);
+            -o-transform: rotate(180deg);
+            transform: rotate(180deg);
+        }
+    }
+}
+
+.order{
+    display: flex;
+    justify-content: space-between;
+    width: 80%;
+    margin: 0 auto;
+    padding-bottom: 40rpx;
+    border-bottom: 1px solid rgb(242,242,242);
+}
+
+.wxparser--wxParser-img{
+    width:100%;
+}
+
+</style>

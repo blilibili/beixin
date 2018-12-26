@@ -1,0 +1,439 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class Index {
+    constructor(){
+        this.data = {
+            isPayBtn:true,
+            insuranceObj:{},
+            scanInsuranceImg:'',
+            showInsurancePic:false,
+            weImg:'',
+            showInsuranceBg:false
+        }
+    }
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+    onLoad(options){
+        let insuranceOrderId = options.id;
+
+        if(options.isPay){
+            this.setData({
+                isPayBtn:false
+            })
+        }
+        this.getInsuranceDetailById(insuranceOrderId);
+        this.getWecheatImg();
+
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+    }
+
+    getInsuranceDetailById(id){
+        let tmp = {
+            insuredId:id,
+            token: wx.getStorageSync('token')
+
+        }
+        tool.httpMethods(tmp , this.app.globalData.httpUrl + '/api/insurancePolicy/findDetail' , '' , 'post')
+            .then((res) => {
+                if(res.resultData.type == null){
+                    res.resultData.inuranceTypeName = '其他'
+                }else{
+                    res.resultData.inuranceTypeName = tool.insuranceType[res.resultData.type]
+                }
+                this.setData({
+                    insuranceObj:res.resultData
+                })
+            })
+    }
+
+    goMainBack(){
+        this.router.replace('/pages/plain/form?reload=true');
+    }
+
+    goToIsuranceAdvisor(){
+        this.router.replace('/pages/insurance/advisor');
+    }
+
+    getWecheatImg(){
+        tool.httpMethods({token:wx.getStorageSync('token') , type:'wechatImg'} , this.app.globalData.httpUrl + '/api/imageInfoApiController/queryImageInfo' , '' , 'post')
+            .then((res) => {
+                this.setData({
+                    weImg:this.app.globalData.httpUrl + res.resultData.list[0].imgUrl
+                })
+            })
+    }
+
+    scanImg(e){
+        let imgUrl = e.currentTarget.dataset.img;
+        this.setData({
+            scanInsuranceImg:imgUrl,
+            showInsurancePic:true,
+            showInsuranceBg:true
+        })
+    }
+
+    showQQGroup(){
+        this.setData({
+            showScan:true,
+            showInsuranceBg:true
+        })
+    }
+
+    hidePic(){
+        this.setData({
+            scanInsuranceImg:'',
+            showInsurancePic:false,
+            showScan:false,
+            showInsuranceBg:false
+        })
+    }
+
+    loadScan(){
+        wx.previewImage({
+            urls:[this.data.weImg]
+        })
+    }
+
+    copyWeNumber(){
+        wx.setClipboardData({
+            data: 'beixinBM',
+            success (res) {
+                wx.getClipboardData({
+                    success (res) {
+                        wx.showToast({
+                            title:'复制成功~'
+                        })
+                    }
+                })
+            }
+        })
+    }
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "首页"
+}
+</config>
+<template>
+<scroll-view scroll-y class="page">
+    <view class="scan" wx:if="{{showScan}}">
+        <view class="scan-box">
+            <view style="font-size: 16px;margin-top: 20rpx;">加群助手入群围观</view>
+            <view style="font-size: 14px;color: rgb(164,164,164);margin-top: 20rpx;">看看别人在关注什么！你也可以提问哦~</view>
+            <view style="font-size: 14px;color: rgb(164,164,164);margin-top: 20rpx;">微信号：beixinBM <span style="color: rgb(103,199,191);" bindtap="copyWeNumber">复制</span></view>
+            <image src="{{weImg}}"></image>
+        </view>
+    </view>
+
+    <view class="wall" wx:if="{{showInsuranceBg}}" bindtap="hidePic"></view>
+    <view class="scan-insurance-img" wx:if="{{showInsurancePic}}">
+        <image src="{{scanInsuranceImg}}"></image>
+    </view>
+    <view class="info-title">
+        <view class="ava">
+            <image src="../../img/insurance/book.png"></image>
+        </view>
+        <view class="common-words">保单详情</view>
+    </view>
+    <view class="info">
+        <view class="form-item">
+            <view class="label">
+                保险名称
+            </view>
+            <view class="common-words">{{insuranceObj.insuranceName}}</view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">
+                保单号
+            </view>
+            <view class="common-words">{{insuranceObj.policyNo}}</view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">
+                保险类型
+            </view>
+            <view class="common-words">{{insuranceObj.inuranceTypeName}}</view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">
+                被保人
+            </view>
+            <view class="common-words">{{insuranceObj.insuredName}}</view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">
+                出生日期
+            </view>
+            <view class="common-words">
+                {{insuranceObj.birthdate}}
+            </view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">
+                保障开始时间
+            </view>
+            <view class="common-words">
+                {{insuranceObj.beginDate}}
+            </view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">
+                交费年限
+            </view>
+            <view class="common-words">
+                {{insuranceObj.paymentPeriod || ''}}
+            </view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">
+                保障期限
+            </view>
+            <view class="common-words">
+                {{insuranceObj.endDate}}
+            </view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">
+                保费(元)
+            </view>
+            <view class="common-words">
+                {{insuranceObj.premium}}
+            </view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">
+                保额
+            </view>
+            <view class="common-words">
+                {{insuranceObj.insuredAmount}}
+            </view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">
+                缴费银行
+            </view>
+            <view class="common-words">
+                {{insuranceObj.payBank || ''}}
+            </view>
+        </view>
+
+        <view class="form-item">
+            <view class="label">
+                账号尾号
+            </view>
+            <view class="common-words">
+                {{insuranceObj.bankCardNo || ''}}
+            </view>
+        </view>
+
+        <view class="form-item" wx:if="{{insuranceObj.remark != null}}">
+            <view class="label">
+                备注
+            </view>
+            <view class="common-words">
+                {{insuranceObj.remark}}
+            </view>
+        </view>
+    </view>
+
+    <view class="order-info">
+        <view class="title">保单详情</view>
+        <view class="ava-group" bindtap="scanImg" data-img="{{item.imgUrl}}" wx:for="{{insuranceObj.imgDetailList}}" wx:key="*">
+            <image src="{{item.imgUrl}}"></image>
+        </view>
+    </view>
+
+    <view class="btn-section" wx:if="{{isPayBtn}}">
+        <view class="reload" bindtap="goMainBack">
+            <image src="../../img/reload.png"></image>
+            <view>重测</view>
+        </view>
+        <view class="QQ" bindtap="showQQGroup">
+            <image src="../../img/group.png"></image>
+            <view>入群咨询</view>
+        </view>
+        <view class="btn" bindtap="goToIsuranceAdvisor">
+            付费咨询(1对1)
+        </view>
+    </view>
+</scroll-view>
+</template>
+<style lang="scss">
+    .scan-insurance-img{
+        position:fixed;
+        top:50%;
+        left:50%;
+        margin-top:-540rpx;
+        margin-left:-338rpx;
+        padding:20rpx;
+        border:1px solid #a4a4a4;
+        background-color:white;
+        z-index:101;
+        height:800rpx;
+        display:flex;
+        align-items:center;
+
+        image{
+            height: 800rpx;
+        }
+    }
+
+    .scan{
+        position:fixed;
+        z-index:101;
+        top:50%;
+        margin-top:-450rpx;
+        left:50%;
+        margin-left:-329rpx;
+        .scan-box{
+            padding: 30rpx;
+            background-color:white;
+            text-align:center;
+
+            image{
+                width: 600rpx;
+                height: 600rpx;
+            }
+        }
+    }
+
+    .wall{
+        width: 100%;
+        height: 100vh;
+        background-color: rgba(0,0,0,0.4);
+        position: fixed;
+        top: 0;
+        z-index: 100;
+    }
+.order-info{
+    padding: 20rpx;
+    background-color: white;
+    margin-top: 20rpx;
+    margin-bottom: 150rpx;
+    .title{
+        font-size: 16px;
+        font-weight: 300;
+    }
+    .ava-group{
+        margin-top: 20rpx;
+        display: inline-block;
+        image{
+            width: 150rpx;
+            height: 150rpx;
+            margin-left: 70rpx;
+        }
+    }
+}
+.info{
+    padding: 20rpx;
+    background-color: white;
+    margin-top: 20rpx;
+    .form-item{
+        &:not(:last-child) {
+            border-bottom: 1px solid rgb(204,204,204);
+        }
+        align-items: center;
+        padding-bottom: 20rpx;
+        padding-top: 20rpx;
+        display: flex;
+        justify-content: space-between;
+        color: rgb(164,164,164);
+
+        .label{
+            font-size: 14px;
+        }
+        .common-words{
+            font-size: 12px;
+        }
+    }
+}
+.info-title{
+    padding: 20rpx 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: white;
+    .ava{
+        image{
+            width: 40rpx;
+            height: 30rpx;
+        }
+    }
+    .common-words{
+        font-size: 14px;
+        margin-left: 20rpx;
+    }
+}
+.page {
+    width: 100%;
+    /*height: 100vh;*/
+    display: block;
+    background-color: rgb(242,242,242);
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.btn-section{
+    position:relative;
+    width:100%;
+    bottom:0;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background-color:white;
+    padding-left:70rpx;
+    .reload{
+        display: none;
+        font-size: 14px;
+        color: rgb(241,150,1);
+        text-align: center;
+        image{
+            width: 50rpx;
+            height: 40rpx;
+        }
+    }
+    .QQ{
+        font-size: 14px;
+        text-align: center;
+        image{
+            width: 50rpx;
+            height: 40rpx;
+        }
+    }
+    .btn{
+        padding:40rpx 70rpx 40rpx 0;
+        background-color:#f19601;
+        color:white;
+        font-size:16px;
+        width:67%;
+        text-align:center;
+    }
+}
+@media only screen and (min-device-width: 375px) and (max-device-height: 812px) and (orientation : portrait) {
+    .btn-section{
+        position: fixed;
+        bottom: 0;
+    }
+}
+
+</style>

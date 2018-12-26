@@ -1,0 +1,350 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class Index {
+    constructor(){
+        this.data = {
+            submitData:[
+                {
+                    index:0,
+                    sex:'男',
+                    birthdate:this.utils.formatDate(Date.now() , 'yyyy-MM-dd'),
+                    hospitalHistoryCode:'0000',
+                    budgetCode:'0001'
+                }
+            ],
+            isReset:false,
+            currentIndex:0,
+            startDate:0,
+            endDate:0
+        }
+    }
+    onLoad(options){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+        wx.setNavigationBarTitle({
+            title:'采集孩子信息'
+        });
+
+        if(options.reload){
+            this.setData({
+                isReset:options.reload
+            })
+        }else{
+            this.getIsSubmitPlain();
+        }
+
+        let date = this.utils.formatDate(new Date() - 365*24*60*60*6*1000 , 'yyyy-MM-dd');
+        let now = this.utils.formatDate(new Date() , 'yyyy-MM-dd');
+        this.setData({
+            startDate:date,
+            endDate:now
+        })
+        //限制到六年前
+    }
+
+    onShow(options) {
+
+    }
+
+    getIsSubmitPlain(){
+        tool.httpMethods({token:wx.getStorageSync('token')} , this.app.globalData.httpUrl + '/api/insuredChildInfo/findsubmittd' , '' , 'post')
+            .then((res) => {
+
+                if(res.resultData.submitFlag){
+                    this.router.replace("/pages/plain/result");
+                }
+            })
+    }
+    changeSex(e){
+        let currentSex = e.currentTarget.dataset.sex;
+        let Index = e.currentTarget.dataset.index;
+        this.setData({
+            ['submitData['+Index+'].sex']:currentSex
+        })
+    }
+    bindDateChange(e){
+        let checkedTime = e.detail.value;
+        let Index = e.currentTarget.dataset.index;
+        this.setData({
+            ['submitData['+Index+'].birthdate']:checkedTime
+        })
+    }
+    changeHistory(e){
+        let currentHistory = e.currentTarget.dataset.history;
+        let Index = e.currentTarget.dataset.index;
+        this.setData({
+            ['submitData['+Index+'].hospitalHistoryCode']:currentHistory
+        })
+    }
+    changePrice(e){
+        let currentPrice = e.currentTarget.dataset.price;
+        let Index = e.currentTarget.dataset.index;
+        this.setData({
+            ['submitData['+Index+'].budgetCode']:currentPrice
+        })
+    }
+
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+
+    submitPlainData(){
+        let tmp = {
+            insuredChildInfoList:JSON.stringify(this.data.submitData),
+            token:wx.getStorageSync('token'),
+            retestFlag:this.data.isReset
+        }
+        tool.httpMethods(tmp , this.app.globalData.httpUrl + '/api/insuredChildInfo/save' , '' , 'post')
+                .then((res) => {
+                    if(res.resultCode == '10000'){
+                        wx.showToast({
+                            title:'操作成功',
+                            success:(res) => {
+                                this.router.push('/pages/plain/result');
+                            }
+                        })
+
+
+                    }else{
+                        wx.showToast({
+                            title:'系统错误'
+                        })
+                    }
+                })
+    }
+
+    //添加一个新孩子
+    addNewChild(){
+        let tmp = {
+            index:parseInt(this.data.currentIndex) + 1,
+            sex:'男',
+            birthdate:this.utils.formatDate(Date.now() , 'yyyy-MM-dd'),
+            hospitalHistoryCode:'0000',
+            budgetCode:'0001'
+        };
+        let temp = this.data.submitData;
+        temp.push(tmp);
+
+        this.setData({
+            submitData:temp,
+            currentIndex:parseInt(this.data.currentIndex) + 1
+        })
+    }
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "首页"
+}
+</config>
+<template>
+<view class="page">
+    <view class="title">
+        您所提供的信息仅限用于系统分析，我们承诺对您的个人信息严格保密
+    </view>
+    <view wx:for="{{submitData}}" wx:key="*">
+        <view class="common-box">
+            <view style="font-size: 15px;margin-bottom: 10rpx">孩子 {{index + 1}}</view>
+            <view class="ques-title">* 1.孩子的性别是</view>
+            <view bindtap="changeSex" data-index="{{item.index}}" data-sex="男" class="check-one {{item.sex == '男' ? 'checked-status':'unchecked-status'}}">
+                <span class="circle"></span>
+                <text>男</text>
+            </view>
+            <view bindtap="changeSex" data-index="{{item.index}}" data-sex="女" class="check-two {{item.sex == '女' ? 'checked-status':'unchecked-status'}}">
+                <span class="circle"></span>
+                <text>女</text>
+            </view>
+        </view>
+
+        <view class="birth-box">
+            <view class="birth-title">* 2.孩子的出生日期</view>
+            <view class="time-control-box">
+                <picker mode="date" data-index="{{item.index}}" start="{{startDate}}" end="{{endDate}}" value="{{item.birthdate}}" bindchange="bindDateChange">
+                    <view class="picker">
+                        <image src="../../img/date.png" style="width: 20rpx;height: 24rpx;"></image> {{item.birthdate}}
+                    </view>
+                </picker>
+            </view>
+        </view>
+
+        <view class="common-box history">
+            <view class="ques-title">* 3.孩子是否有住院/手术或其他病史</view>
+            <view bindtap="changeHistory" data-index="{{item.index}}" data-history="0000" class="check-one {{item.hospitalHistoryCode == '0000' ? 'checked-status':'unchecked-status'}}">
+                <span class="circle"></span>
+                <text>无</text>
+            </view>
+            <view bindtap="changeHistory" data-index="{{item.index}}" data-history="0001" class="check-two {{item.hospitalHistoryCode == '0001' ? 'checked-status':'unchecked-status'}}">
+                <text class="circle"></text>
+                <text>手术</text>
+            </view>
+            <view bindtap="changeHistory" data-index="{{item.index}}" data-history="0002" class="check-two {{item.hospitalHistoryCode == '0002' ? 'checked-status':'unchecked-status'}}">
+                <text class="circle"></text>
+                <text>早产</text>
+            </view>
+            <view bindtap="changeHistory" data-index="{{item.index}}" data-history="0003" class="check-two {{item.hospitalHistoryCode == '0003' ? 'checked-status':'unchecked-status'}}">
+                <text class="circle"></text>
+                <text>体重偏轻</text>
+            </view>
+            <view bindtap="changeHistory" data-index="{{item.index}}" data-history="0004" class="check-two {{item.hospitalHistoryCode == '0004' ? 'checked-status':'unchecked-status'}}">
+                <text class="circle"></text>
+                <text>先天性疾病</text>
+            </view>
+            <view bindtap="changeHistory" data-index="{{item.index}}" data-history="9999" class="check-two {{item.hospitalHistoryCode == '9999' ? 'checked-status':'unchecked-status'}}">
+                <text class="circle"></text>
+                <text>其他</text>
+            </view>
+        </view>
+
+        <view class="common-box price">
+            <view class="ques-title">* 4.保险保费支出预算</view>
+            <view bindtap="changePrice" data-index="{{item.index}}" data-price="0001" class="check-one {{item.budgetCode == '0001' ? 'checked-status':'unchecked-status'}}">
+                <span class="circle"></span>
+                <text>3500元以内</text>
+            </view>
+            <view bindtap="changePrice" data-index="{{item.index}}" data-price="0002" class="check-two {{item.budgetCode == '0002' ? 'checked-status':'unchecked-status'}}">
+                <text class="circle"></text>
+                <text>3500元-5000元</text>
+            </view>
+            <view bindtap="changePrice" data-index="{{item.index}}" data-price="0003" class="check-two {{item.budgetCode == '0003' ? 'checked-status':'unchecked-status'}}">
+                <text class="circle"></text>
+                <text>5000元以上</text>
+            </view>
+        </view>
+    </view>
+
+    <view class="btn-box">
+        <button class="common-btn" bindtap="submitPlainData" >立即提交</button>
+        <!--<button class="common-btn" bindtap="goToRouter" data-url="/pages/plain/result" >参加报名</button>-->
+        <button class="common-btn" bindtap="addNewChild">再添加一个孩子</button>
+    </view>
+</view>
+</template>
+<style lang="scss">
+.page {
+    width: 100%;
+    display: block;
+    background-color: rgb(242,242,242);
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.title{
+    font-size: 12px;
+    color: rgb(164,164,164);
+    text-align: center;
+    padding: 20rpx 40rpx;
+    background-color: white;
+    position: relative;
+    top: 30rpx;
+}
+.birth-box{
+    background-color: white;
+    margin-top: 20rpx;
+    padding: 20rpx 20rpx;
+    .birth-title{
+        font-size: 16px;
+    }
+    .time-control-box{
+        display: flex;
+        align-items: center;
+        margin-top: 20rpx;
+        font-size: 14px;
+        background-color: rgb(241,150,1);
+        border-radius: 4px;
+        color: white;
+        padding: 10rpx 20rpx;
+    }
+}
+.common-box{
+    background-color: white;
+    margin-top: 60rpx;
+    padding: 20rpx 20rpx;
+    .ques-title{
+        font-size: 14px;
+        font-weight: 400;
+    }
+    .check-one{
+        display: flex;
+        align-items: center;
+        padding: 10rpx 0;
+        margin-top: 10rpx;
+        width: 100%;
+        border-radius: 4px;
+        .circle{
+            display: inline-block;
+            width: 20rpx;
+            height: 20rpx;
+            border-radius: 40px;
+            border: 1px solid lightgrey;
+            margin-left: 20rpx;
+        }
+        text{
+            font-size: 14px;
+            margin-left: 20rpx;
+        }
+    }
+    .check-two{
+        display: flex;
+        align-items: center;
+        padding: 10rpx 0;
+        margin-top: 10rpx;
+        width: 100%;
+        border-radius: 4px;
+        text{
+            font-size: 14px;
+            margin-left: 20rpx;
+        }
+        .circle{
+            display: inline-block;
+            width: 20rpx;
+            height: 20rpx;
+            border-radius: 40px;
+            border: 1px solid lightgrey;
+            margin-left: 20rpx;
+        }
+    }
+}
+.common-btn{
+    background-color: rgb(241,150,1);
+    color: white;
+    padding: 0 40rpx;
+    margin-top: 20rpx;
+    margin-bottom: 20rpx;
+    font-size: 14px;
+    width: 45%;
+}
+.btn-box{
+    width: 95%;
+    margin: 0 auto;
+    display: flex;
+}
+.checked-status{
+    background-color: rgb(241,150,1);
+    .circle{
+        background-color: white;
+    }
+    text{
+        color: white;
+    }
+}
+.unchecked-status{
+    background-color: rgb(230,230,230);
+    .circle{
+        border: 1px solid lightgrey;
+    }
+}
+.history{
+    margin-top: 20rpx;
+}
+.price{
+    margin-top: 20rpx;
+}
+
+</style>

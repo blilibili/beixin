@@ -1,0 +1,196 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class NewsList {
+    constructor(){
+        this.data = {
+            imgUrls:[],
+            article:{},
+            articleType:''
+        }
+    }
+    onLoad(options){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+
+        wx.setNavigationBarTitle({
+            title:'文章详情'
+        })
+        this.getNewsDetailById(options.articleId);
+    }
+    goBack(){
+        this.router.goBack();
+    }
+    getNewsDetailById(id){
+        tool.httpMethods({id:id} , this.app.globalData.httpUrl + '/api/articleApiController/get' , '' , 'get')
+            .then((res) => {
+                res.resultData.imgUrl = this.app.globalData.httpUrl + res.resultData.imgUrl;
+                //正则匹配所有img标签
+                const regex = new RegExp('<img', 'gi');
+                res.resultData.content = res.resultData.content.replace(regex, `<img style="max-width: 100%;"`);
+                this.setData({
+                    article:res.resultData
+                })
+            })
+    }
+
+    onShareAppMessage(){
+        let id = wx.getStorageSync('userId');
+        if(this.data.article.type == '0001'){
+            let backImg = this.data.article.content;
+            return {
+                title: '每天学一点,理财不冒险',
+                path: '/pages/index?articleId=' + this.data.article.id,
+                imageUrl: backImg
+            }
+        }else{
+            return {
+                title: this.data.article.title,
+                path: '/pages/index?articleId=' + this.data.article.id,
+                // imageUrl:'https://www.beixinbm.com/beixin/imgInfo/insuranceConver/u1052.png'
+                imageUrl:this.data.article.imgUrl
+            }
+        }
+    }
+}
+
+wxa.launchPage(NewsList);
+</script>
+<config>
+{
+    "navigationTextTitle": "首页",
+    "usingComponents": {
+        "wxparser": "plugin://wxparserPlugin/wxparser"
+    }
+}
+</config>
+<template>
+<view class="page">
+    <view class="header-banner" wx:if="{{article.type == '0002'}}">
+        <image mode="widthFix" src="{{article.imgUrl}}" style="width: 100%;"></image>
+    </view>
+
+    <view class="dot" style="{{article.type == '0002'?'position:relative;top:-84rpx;':''}}">
+        <image class="image" src="{{article.type == '0002'?'../../img/detail-dot.png':''}}" style="{{article.type == '0001' ? 'display:none;':''}}" mode="widthFix"></image>
+        <view class="article-title" wx:if="{{article.type == '0002'}}">
+            {{article.title}}
+        </view>
+        <view class="small-title" wx:if="{{article.type == '0002'}}">
+            <image src="../../img/small-title.png" style="opacity: 0;"></image>
+            <view>{{article.summary}}</view>
+        </view>
+        <view class="content {{article.type != '0001' ? 'text-content':''}}">
+            <wxparser rich-text="{{article.content}}" class="content">
+
+            </wxparser>
+            <!--<rich-text nodes="{{article.content}}" bindtap="tap">-->
+
+            <!--</rich-text>-->
+        </view>
+        <view class="comment" style="display: none;">
+            <view class="input-control">
+                <input placeholder="发表评论..."/>
+            </view>
+            <view class="control">
+                <span style="margin-right: 50rpx;"><image src="../../img/notice.png"></image></span>
+                <span><image src="../../img/heart.png"></image></span>
+            </view>
+        </view>
+    </view>
+
+
+    <!--<view class="back-btn">返回首页</view>-->
+
+</view>
+</template>
+<style lang="scss">
+    .back-btn{
+        width: 200rpx;
+        text-align: center;
+        padding: 20rpx 0;
+        background-color: rgb(244,144,0);
+        border-radius: 8px;
+        font-size: 13px;
+        color: white;
+    }
+.page {
+    width: 100%;
+    /*height: 100vh;*/
+    display: block;
+    /*background-color: rgb(242,242,242);*/
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.text-content{
+    width: 90%;
+    margin: 0 auto;
+}
+.header-banner{
+    width: 100%;
+}
+
+.dot{
+    margin: 0 auto;
+    background-color: rgba(255,255,255,0.3);
+    z-index: 100;
+    padding-bottom: 10rpx;
+    .image{
+        width: 150rpx;
+    }
+    .article-title{
+        width: 90%;
+        font-size: 30px;
+        font-weight: 400;
+        margin: 20rpx auto 20rpx auto;
+        padding: 10rpx;
+    }
+    .small-title{
+        width: 90%;
+        margin-top: 60rpx;
+        text-align: center;
+        image{
+            width: 100%;
+            height: 60rpx;
+        }
+        view{
+            position: relative;
+            top: -64rpx;
+            font-size: 16px;
+            left: 2px;
+        }
+    }
+    .content{
+        /*padding: 10rpx 80rpx 0 80rpx;*/
+        font-size: 14px;
+        color: rgb(164,164,164);
+        /*text-indent:40rpx*/
+    }
+    .comment{
+        margin-top: 150rpx;
+        padding: 10rpx;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20rpx;
+        .input-control{
+            font-size: 14px;
+            padding: 10rpx 0 10rpx 20rpx;
+            background-color: rgb(237,237,237);
+        }
+        .control{
+            image{
+                width: 64rpx;
+                height: 64rpx;
+            }
+        }
+    }
+}
+
+    .wxparser--wxParser-img{
+        width:100%;
+    }
+
+</style>

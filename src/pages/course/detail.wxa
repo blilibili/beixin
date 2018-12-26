@@ -1,0 +1,262 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class CourseDetail {
+    constructor(){
+        this.data = {
+            articleObj:{},
+            canBuy:true,
+            default_ava:'../../img/default_ava.png',
+            articleId:0
+        }
+    }
+    onLoad(option){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+
+        wx.setNavigationBarTitle({
+            title:'理财荟详情'
+        })
+        this.getArticleDetailById(option.id);
+
+        this.setData({
+            // canBuy:option.canbuy,
+            articleId:option.id
+        })
+    }
+    getArticleDetailById(id){
+        //获取理财会详情
+        tool.httpMethods({id:id , token:wx.getStorageSync('token')} , this.app.globalData.httpUrl + '/api/courseApiController/get' , '' , 'get')
+            .then((res) => {
+                res.resultData.imgUrl = this.app.globalData.httpUrl + res.resultData.imgUrl;
+                //正则匹配所有img标签
+                const regex = new RegExp('<img', 'gi');
+                res.resultData.introduce = res.resultData.introduce.replace(regex, `<img style="max-width: 100%;"`);
+                this.setData({
+                    articleObj:res.resultData
+                })
+            })
+    }
+    goBack(){
+        this.router.goBack();
+    }
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+    handleContact(e){
+
+    }
+
+    onShareAppMessage(){
+        let id = wx.getStorageSync('userId');
+        let backImg = this.data.articleObj.imgUrl;
+        return {
+            title: '来理财荟,让你慧理财',
+            // path: '/pages/course/detail?id=' + this.data.articleId,
+            path: '/pages/index?courseId=' + this.data.articleId,
+            // imageUrl:'https://www.beixinbm.com/beixin/imgInfo/insuranceConver/u1052.png'
+            imageUrl:backImg
+        }
+    }
+}
+
+wxa.launchPage(CourseDetail);
+</script>
+<config>
+{
+    "navigationTextTitle": "课程详情",
+    "usingComponents": {
+        "wxparser": "plugin://wxparserPlugin/wxparser"
+    }
+}
+</config>
+<template>
+<view class="page">
+    <view class="header-banner">
+        <image src="{{articleObj.imgUrl}}" style="width: 100%;height: 100%;"></image>
+    </view>
+    <view class="course-detail-content">
+        <view class="title">{{articleObj.title}}</view>
+        <view class="times">{{articleObj.subTitle}}</view>
+        <view class="price">
+            <text style="color:#F19601;">¥{{articleObj.amount}}</text>
+            <text style="color: rgb(164,164,164);">已报{{articleObj.joinerCount}}人</text>
+        </view>
+        <view class="sign-up">
+            <view>时间: {{articleObj.classTime}}</view>
+            <view>地点: {{articleObj.address}}</view>
+        </view>
+    </view>
+
+    <view class="course-introduce">
+        <view class="title">课程简介</view>
+        <wxparser rich-text="{{articleObj.introduce}}" class="content">
+
+        </wxparser>
+        <!--<rich-text nodes="{{articleObj.introduce}}" class="content">-->
+
+        <!--</rich-text>-->
+    </view>
+
+    <view class="course-join-people">
+        <view class="title">参加人数:{{articleObj.joinerCount}}人</view>
+        <view class="people-ava">
+            <image src="{{item.avater || default_ava}}" wx:for="{{articleObj.joiners}}" wx:key="*"></image>
+        </view>
+    </view>
+
+    <view class="join-btn">
+        <view class="query">
+            <button style="line-height: 1.4444;" class="detail-join-btn control" open-type="contact" bindcontact="handleContact">
+                <view style="height: 40rpx;">
+                    <image src="../../img/sound.png" style="width: 40rpx;height: 40rpx;"></image>
+                </view>
+                咨询
+            </button>
+
+        </view>
+        <view class="join">
+            <view wx:if="{{articleObj.canBuy}}" class="detail-join-btn control" bindtap="goToRouter" data-url="/pages/course/pay?articleId={{articleObj.id}}">报名参加</view>
+            <view wx:if="{{!articleObj.canBuy}}" class="detail-join-btn control" style="background-color: rgb(164,164,164);">已报名</view>
+        </view>
+    </view>
+</view>
+</template>
+<style lang="scss">
+    button::after{ border: none; }
+.page {
+    /*height: 120vh;*/
+    display: block;
+    background-color: rgb(242,242,242);
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.header-banner{
+    width: 100%;
+    height: 340rpx;
+}
+.course-detail-content{
+    background-color: white;
+    margin: 0 auto 20rpx auto;
+    padding: 20rpx;
+    .title{
+        margin-top: 40rpx;
+        font-size: 16px;
+        font-weight: 400;
+        width: 100%;
+        text-align: center;
+    }
+    .times{
+        text-align: center;
+        width: 100%;
+        color:#F19601;
+        font-size: 14px;
+    }
+    .price{
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+    }
+}
+.course-introduce{
+    background-color: white;
+    margin: 0 auto 20rpx auto;
+    padding: 20rpx;
+    .title{
+        font-size: 16px;
+        color:#F19601;
+    }
+    .content{
+        color: rgb(164,164,164);
+        text-indent:40rpx;
+        font-size: 12px;
+    }
+}
+.course-join-people{
+    background-color: white;
+    margin: 0 auto 240rpx auto;
+    padding: 20rpx;
+    .title{
+        font-size: 14px;
+        padding-bottom: 10rpx;
+    }
+    .people-ava{
+        display: flex;
+        flex-wrap:wrap;
+        image{
+            margin-left: 10rpx;
+            margin-top: 10rpx;
+            width: 60rpx;
+            height: 60rpx;
+        }
+    }
+}
+.join-btn{
+    background-color: white;
+    display: flex;
+    width: 100%;
+    position:fixed;
+    bottom:0;
+    .detail-join-btn{
+        width: 100%;
+        color:red;
+        background-color: white;
+    }
+    .query{
+        width: 64%;
+        display: flex;
+        align-items: center;
+        .control{
+            font-size: 12px;
+            color: rgb(164,164,164);
+            border-radius: 0;
+            border: 0;
+            border-right: 1px solid lightgrey;
+            text-align: center;
+        }
+    }
+    .join{
+        width: 100%;
+        .control{
+            font-size: 14px;
+            color: white;
+            background-color: #F19601;
+            border-radius: 0;
+            padding: 20rpx;
+            text-align: center;
+        }
+    }
+}
+.course-header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20rpx;
+    background-color: white;
+    .course-name{
+        font-size: 16px;
+    }
+    view{
+        image{
+            height: 50rpx;
+            width: 50rpx;
+            -webkit-transform: rotate(180deg);
+            -moz-transform: rotate(180deg);
+            -ms-transform: rotate(180deg);
+            -o-transform: rotate(180deg);
+            transform: rotate(180deg);
+        }
+    }
+}
+.sign-up{
+    margin-top: 40rpx;
+    view{
+        font-size: 14px;
+    }
+}
+</style>

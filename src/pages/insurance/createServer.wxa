@@ -1,0 +1,287 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class Index {
+    constructor(){
+        this.data = {
+            grade:1,
+            money:0
+        }
+    }
+    onLoad(options){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+        let money = 0;
+        if(options.grade == 1){
+            money = 99
+        }else if(options.grade == 2){
+            money = 399
+        }else if(options.grade == 3){
+            money = 999
+        }
+        this.setData({
+            grade:options.grade || '',
+            money:money
+        })
+    }
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url || e;
+        this.router.push(url);
+    }
+    changeGrade(e){
+        let grade = e.currentTarget.dataset.grade || e;
+        let money = 0
+        if(grade == 1){
+            money = 99
+        }else if(grade == 2){
+            money = 399
+        }else if(grade == 3){
+            money = 999
+        }
+
+        this.setData({
+            grade:grade,
+            money:money
+        })
+    }
+    gotopay(){
+        this.router.push('/pages/insurance/order?grade=' + this.data.grade + '&isPay=false');
+    }
+    goToPay(e){
+        let formId = e.detail.formId;
+
+        let tmp = {
+            token:wx.getStorageSync('token'),
+            type:'3',
+            typeId:this.data.grade,
+            amount:this.data.money,
+            nickName:'',
+            avatar:''
+        }
+        tool.httpMethods(tmp , this.app.globalData.httpUrl + '/api/orderApiController/save' , '' , 'post')
+            .then((res) => {
+                if(res.resultCode == '10000'){
+                    let orderId = res.resultData.serialNumber;
+                    let time = tool.createTimeStamp().toString();
+                    let nstr = tool.createNonceStr();
+                    let temp = {
+                        token:wx.getStorageSync('token'),
+                        openid:wx.getStorageSync('openId'),
+                        body:'保单分析',
+                        orderId:orderId,
+                        totalFee:this.data.money,
+                        attach:0,
+                        formId:formId
+                    }
+                    //发起微信支付 1516923291
+                    tool.httpMethods(temp , this.app.globalData.httpUrl + '/api/payApiController/tenpayAddOrderJSAPI' , '' , 'post')
+                        .then((result) => {
+                            let prepayId = result.resultData.prepayid;
+                            wx.requestPayment({
+                                timeStamp:time,
+                                nonceStr:nstr,
+                                package:'prepay_id='+ prepayId,
+                                signType:'MD5',
+                                paySign:tool.md5Key(nstr , prepayId , time),
+                                success:(res) => {
+                                    wx.showToast({
+                                        title:'支付成功',
+                                        success:()=>{
+                                            this.router.switch('/pages/insurance/index');
+                                        }
+                                    })
+                                },
+                                fail(res){
+                                    wx.showToast({
+                                        title:'取消支付',
+                                        success:()=>{
+                                            this.router.switch('/pages/insurance/index');
+                                        }
+                                    })
+                                },
+                                complete(res){
+
+                                }
+                            })
+                        })
+                }else{
+                    wx.showToast({
+                        title:res.resultMessage
+                    });
+                }
+            })
+    }
+
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "首页"
+}
+</config>
+<template>
+<view class="page">
+   <view class="plain-section">
+       <image src="../../img/plain-bg.jpg" style="width: 100%;height: 340rpx;"></image>
+   </view>
+
+    <view class="title">定制服务</view>
+
+    <view class="label">
+        <view class="common {{grade == 1 ? 'checked' : ''}}" bindtap="changeGrade" data-grade="1">个人保单</view>
+        <view class="common {{grade == 2 ? 'checked' : ''}}" bindtap="changeGrade" data-grade="2">家庭保单(10份以下)</view>
+        <view class="common {{grade == 3 ? 'checked' : ''}}" bindtap="changeGrade" data-grade="3">家庭保单(10份以上)</view>
+    </view>
+
+    <view class="info" wx:if="{{grade == 1}}">
+        <view class="title">
+            <view class="sub-title">个人保单</view>
+            <view class="price">¥{{money}}</view>
+        </view>
+        <view class="content">
+            <view>个人保单上传及分析</view>
+            <view>初步电话/线上沟通后24小时内出保单分析报告和方案</view>
+            <view>出方案后72小时内可咨询</view>
+            <view>可选择一次电话沟通</view>
+            <view>协助保单计划落地</view>
+            <view>享受保单终身保全和理赔服务</view>
+            <view>沟通时间: 周一至周五工作时间</view>
+        </view>
+    </view>
+
+    <view class="info" wx:if="{{grade == 2}}">
+        <view class="title">
+            <view class="sub-title">家庭保单(10份以下)</view>
+            <view class="price">¥{{money}}</view>
+        </view>
+        <view class="content">
+            <view>5年以上保险领域实战经验</view>
+            <view>曾服务超100个家庭的保单整理及分析</view>
+            <view>分析家庭情况和风险,查漏补全现有保障</view>
+            <view>初步电话沟/线上沟通后48小时内出保单分析报告和方案</view>
+            <view>出方案后72小时内可咨询(含周末)</view>
+            <view>可选择两次电话沟通</view>
+            <view>协助保单计划落地</view>
+            <view>享受保单终身保全和理赔服务</view>
+            <view>沟通时间：周一至周五工作日除白天外，可预约工作日晚上沟通</view>
+        </view>
+    </view>
+
+    <view class="info" wx:if="{{grade == 3}}">
+        <view class="title">
+            <view class="sub-title">家庭保单(10份以上)</view>
+            <view class="price">¥{{money}}</view>
+        </view>
+        <view class="content">
+            <view>曾服务超300个家庭的保单整理及分析</view>
+            <view>分析家庭情况和风险,查漏补全现有保障</view>
+            <view>解决预算较充足或身体状况不佳的保单处理建议</view>
+            <view>初步电话沟通及答疑时间合计1.5小时</view>
+            <view>出方案后72小时可咨询（含周末）</view>
+            <view>可选择两次电话免费沟通</view>
+            <view>协助保单计划落地</view>
+            <view>享受保单终身保全和理赔服务</view>
+            <view>沟通时间：提前预约，时间灵活</view>
+            <view>999元交到一个很懂理财的财务管家，简直太划算啦！</view>
+        </view>
+    </view>
+
+    <button class="pay-btn" bindtap="gotopay"  formType="submit">立即支付</button>
+    <!--<form bindsubmit="goToPay" report-submit="{{true}}">-->
+        <!--<button class="pay-btn" formType="submit">立即支付</button>-->
+    <!--</form>-->
+</view>
+</template>
+<style lang="scss">
+
+.page {
+    width: 100%;
+    height: 100%;
+    display: block;
+    margin-bottom: 20rpx;
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+.plain-section{
+    height: 340rpx;
+}
+.title{
+    padding: 30rpx 0;
+    background-color: white;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 200;
+}
+.label{
+    display: flex;
+    justify-content: space-around;
+    background-color: rgb(242,242,242);
+    margin: 20rpx 0;
+    .common{
+        text-align: center;
+        width: 300rpx;
+        border-radius: 8px;
+        padding: 10rpx 0;
+        font-size: 13px;
+    }
+    .checked{
+        background-color: rgb(241,150,1);
+        color: white;
+    }
+}
+.info{
+    padding: 20rpx 0;
+    text-align: center;
+    background-color: white;
+    .title{
+        justify-content: space-between;
+        width: 83%;
+        margin: 0 auto;
+        display: flex;
+        font-size: 14px;
+        padding-bottom: 20rpx;
+        font-weight: bold;
+        align-items:center;
+        .price{
+            margin-left: 40rpx;
+            color: rgb(242,150,1);
+            font-size: 18px;
+        }
+    }
+    .content{
+        line-height: 1.88888;
+        font-size: 12px;
+        color: rgb(164,164,164);
+        text-align:left;
+        width:80%;
+        margin:0 auto;
+        padding-left: 20rpx;
+        border-left:1px solid rgb(164,164,164);
+    }
+}
+.pay-btn{
+    position: relative;
+    width: 600rpx;
+    left: 50%;
+    margin-left:-315rpx;
+    background-color: rgb(241,150,1);
+    color: white;
+    border-radius: 24px;
+    text-align: center;
+    bottom: 0;
+    margin-bottom: 30rpx;
+}
+
+@media only screen and (device-width : 375px) and (device-height : 812px) and (-webkit-device-pixel-ratio : 3) {
+    .pay-btn{
+        position: fixed;
+        bottom: 30rpx;
+    }
+}
+</style>

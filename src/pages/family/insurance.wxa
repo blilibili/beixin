@@ -1,0 +1,189 @@
+<script>
+import {wxa, Page} from '@wxa/core';
+import tool from '../../util/tool'
+@Page
+class Index {
+    constructor(){
+        this.data = {
+            familyList:[],
+            avaImg:'',
+            userId:0,
+            insuranceList:[]
+        }
+    }
+    bindMoreFamily(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+    onLoad(options){
+        wx.setNavigationBarColor({
+            frontColor:'#ffffff',
+            backgroundColor:'#F19601'
+        })
+        this.setData({
+            avaImg:options.ava,
+            name:options.name,
+            userId:options.userId
+        })
+        // wx.setNavigationBarTitle({
+        //     title:'我的家庭'
+        // })
+        this.getMyFamilyInsurance(options.userId)
+    }
+
+    getMyInfo(){
+        let id = wx.getStorageSync('userId');
+        let token = wx.getStorageSync('token');
+        tool.httpMethods({id:this.data.userId , token:token} , this.app.globalData.httpUrl + '/api/familyApiController/getFamilyList' , '' , 'post')
+
+    }
+
+    getMyFamilyInsurance(id){
+        let token = wx.getStorageSync('token');
+        tool.httpMethods({id:id , token} , this.app.globalData.httpUrl + '/api/familyApiController/getFamilyInsurance' , '' , 'post')
+            .then((res) => {
+                res.resultData.forEach((v , k) => {
+                    if(v.type == null){
+                        v.inuranceTypeName = '其他'
+                    }else{
+                        v.inuranceTypeName = tool.insuranceType[v.type]
+                    }
+                })
+                this.setData({
+                    insuranceList:res.resultData
+                })
+            })
+    }
+
+    onShareAppMessage(){
+
+    }
+
+    goToRouter(e){
+        let url = e.currentTarget.dataset.url;
+        this.router.push(url);
+    }
+}
+
+wxa.launchPage(Index);
+</script>
+<config>
+{
+    "navigationTextTitle": "我的家庭"
+}
+</config>
+<template>
+<view class="page">
+    <view class="header">
+        <view class="ava-info">
+            <image class="ava-img" src="{{avaImg}}"></image>
+            <view style="font-size: 14px;margin-left: 10rpx;color: white;">
+                {{name}}
+            </view>
+        </view>
+        <view class="control" bindtap="goToRouter" data-url="/pages/family/info?userId={{userId}}">
+            <view style="margin-right: 10rpx;">完善个人信息</view>
+            <view class="common-image">
+                <image src="../../img/panel-white.png" style="width: 40rpx;height: 40rpx;"></image>
+            </view>
+        </view>
+    </view>
+    <view style="font-size: 16px;padding: 20rpx;">家庭保单({{insuranceList.length}})</view>
+    <view class="content">
+        <view class="family-border" wx:for="{{insuranceList}}" wx:key="*" bindtap="goToRouter" data-url="/pages/insurance/info?id={{item.id}}">
+            <view class="family-title">
+                <view style="display: flex;align-items: center;">
+                    <view class="family-other">{{item.inuranceTypeName}}</view>
+                    <view class="family-other-titles">{{item.insuranceName}}</view>
+                </view>
+
+                <view class="insurance-status-icon">
+                    <!--<image wx:if="{{item.status == 0}}" src="../../img/insurancing.png" style="width: 140rpx;height: 64rpx;"></image>-->
+
+                    <image wx:if="{{item.status == 1}}" src="../../img/insurancing.png" style="width: 140rpx;height: 64rpx;"></image>
+
+                    <image wx:if="{{item.status == 2}}" src="../../img/outdate.png" style="width: 140rpx;height: 64rpx;"></image>
+
+                    <image wx:if="{{item.status == 3}}" src="../../img/outdating.png" style="width: 140rpx;height: 64rpx;"></image>
+
+                </view>
+            </view>
+            <view class="insurance-family-content">
+                <view>被保人：</view>
+                <view>{{item.insuredName}}</view>
+            </view>
+            <view class="insurance-family-content">
+                <view>保费：</view>
+                <view>{{item.insuredAmount}}</view>
+            </view>
+            <view class="insurance-family-content">
+                <view>保障时间：</view>
+                <view>{{item.beginDate}}至{{item.endDate}}</view>
+            </view>
+        </view>
+    </view>
+</view>
+</template>
+<style lang="scss">
+    button::after{ border: none; }
+.page {
+    height: 100%;
+    display: block;
+    background-color: rgb(242,242,242);
+    /*flex-direction: row;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
+}
+    .family-border{
+        border-bottom:1px solid rgb(209,209,209);
+        margin-top: 10rpx;
+        background-color: white;
+        padding: 20rpx;
+        .family-title{
+            display: flex;
+            justify-content: space-between;
+        }
+        .family-other{
+            border: 1px solid  rgb(241,150,1);
+            padding: 5rpx 20rpx;
+            color:  rgb(241,150,1);
+            font-size: 12px;
+        }
+        .family-other-titles{
+            font-size: 14px;
+            font-weight: bold;
+            margin-left: 20rpx;
+        }
+
+        .insurance-family-content{
+            display: flex;
+            justify-content:space-between;
+            font-size: 14px;
+            color: rgb(164,164,164);
+            line-height: 1.8888;
+        }
+    }
+.header{
+    background-color: rgb(241,150,1);
+    padding: 20rpx;
+    display: flex;
+    justify-content: space-between;
+}
+.control{
+    align-items: center;
+    display: flex;
+    font-size: 12px;
+    color: white;
+}
+    .ava-info{
+        display: flex;
+        padding: 40rpx;
+        text-align: center;
+        align-items: center;
+        .ava-img{
+            border-radius: 32px;
+            width: 150rpx;
+            height: 150rpx;
+        }
+    }
+</style>
